@@ -2,12 +2,12 @@ package main
 
 import (
 	"log"
-	"turl/internal/storage"
-	"turl/internal/ui/components/controls"
-	httpverbdropdown "turl/internal/ui/components/dropdown"
-	urlinputfield "turl/internal/ui/components/input"
-	"turl/internal/ui/components/request"
-	"turl/internal/ui/components/response"
+	"treq/internal/storage"
+	"treq/internal/ui/components/controls"
+	httpverbdropdown "treq/internal/ui/components/dropdown"
+	urlinputfield "treq/internal/ui/components/input"
+	"treq/internal/ui/components/request"
+	"treq/internal/ui/components/response"
 
 	_ "github.com/mattn/go-sqlite3"
 

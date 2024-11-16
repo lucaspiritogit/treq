@@ -30,7 +30,7 @@ func NewRequestManager(list *tview.List, app *tview.Application) (*RequestManage
 		return nil, fmt.Errorf("could not find user config directory: %v", err)
 	}
 
-	dbPath := appData + "/turl/turl.db"
+	dbPath := appData + "/treq/treq.db"
 	dbDir := filepath.Dir(dbPath)
 
 	if _, err := os.Stat(dbDir); os.IsNotExist(err) {

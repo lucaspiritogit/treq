@@ -3,7 +3,7 @@ package urlinputfield
 import (
 	"fmt"
 	"regexp"
-	"turl/internal/http_request"
+	"treq/internal/http_request"
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
