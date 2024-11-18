@@ -1,4 +1,4 @@
-package httpverbdropdown
+package dropdown
 
 import (
 	"github.com/gdamore/tcell/v2"

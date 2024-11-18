@@ -1,4 +1,4 @@
-package urlinputfield
+package inputfield
 
 import (
 	"fmt"
@@ -31,11 +31,10 @@ func NewURLInputField(responseView, responseMetadata *tview.TextView, httpVerbDr
 		SetLabel("URL: ").
 		SetFieldWidth(55).
 		SetAcceptanceFunc(tview.InputFieldMaxLength(1024)).
-		SetText("https://jsonplaceholder.typicode.com/todos").
-		SetFieldBackgroundColor(tcell.ColorLavenderBlush).
-		SetFieldTextColor(tcell.ColorWhite).
-		SetLabelColor(tcell.ColorYellow).
-		SetBorderColor(tcell.ColorWhite)
+		SetText("https://jsonplaceholder.typicode.com/todos")
+
+	urlField.SetFocusFunc(func() {
+	})
 
 	urlField.SetDoneFunc(urlField.handleKeyPress)
 	return urlField

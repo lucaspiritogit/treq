@@ -3,6 +3,7 @@ package response
 import (
 	"encoding/json"
 
+	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
 )
 
@@ -13,6 +14,16 @@ func GetResponseTextView() *tview.TextView {
 		SetWrap(true).
 		SetScrollable(true)
 	responseTextView.SetBorder(true).SetTitle("Response")
+
+	responseTextView.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+		switch event.Key() {
+		case tcell.KeyPgUp:
+			responseTextView.ScrollToBeginning()
+		case tcell.KeyPgDn:
+			responseTextView.ScrollToEnd()
+		}
+		return event
+	})
 
 	return responseTextView
 }

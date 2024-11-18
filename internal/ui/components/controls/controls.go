@@ -15,7 +15,7 @@ func GetControlsTextView() *tview.TextView {
 HTTP Verbs:
 [red]g[white]   GET
 [red]p[white]   POST
-[red]t[white]   PUT
+[red]e[white]   PUT
 [red]d[white]   DELETE
 
 Navigation:
