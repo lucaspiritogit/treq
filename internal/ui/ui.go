@@ -35,7 +35,7 @@ func InitializeAppUI(app *tview.Application, requestList *tview.List, requestSer
 
 	shortcutsTextView := tview.NewTextView().
 		SetDynamicColors(true).
-		SetText("Keyboard Shortcuts: [blue]?[white] Show controls | [blue]q[white] Quit").
+		SetText("[blue]?[white] Show controls | [blue]q[white] Quit | [blue]i[white] Input mode | [blue]b[white] Request body").
 		SetScrollable(false).
 		SetWrap(true)
 
@@ -122,9 +122,9 @@ func InitializeAppUI(app *tview.Application, requestList *tview.List, requestSer
 		switch event.Rune() {
 		case '?':
 			if isControlsModalOpen {
-				app.SetRoot(controlsTextView, true)
-			} else {
 				app.SetRoot(appFlex, true)
+			} else {
+				app.SetRoot(controlsTextView, true)
 			}
 			isControlsModalOpen = !isControlsModalOpen
 			return nil
