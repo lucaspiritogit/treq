@@ -6,4 +6,3 @@ app.log
 .vscode
 *.exe
 dist/
-.goreleaser.yaml

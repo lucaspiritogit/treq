@@ -1,4 +1,4 @@
-package inputfield
+package input
 
 import (
 	"fmt"

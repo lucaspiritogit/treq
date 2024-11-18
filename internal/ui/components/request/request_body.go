@@ -2,13 +2,13 @@ package request
 
 import "github.com/rivo/tview"
 
-func GetRequestTextView() *tview.TextView {
+func GetRequestBody() *tview.TextView {
 	requestTextView := tview.NewTextView().
 		SetDynamicColors(true).
 		SetRegions(true).
 		SetWrap(false).
 		SetScrollable(true)
-	requestTextView.SetBorder(true).SetTitle("Request")
+	requestTextView.SetBorder(true).SetTitle("Body")
 
 	return requestTextView
 }

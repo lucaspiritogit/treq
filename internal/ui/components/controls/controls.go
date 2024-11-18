@@ -1,28 +1,34 @@
 package controls
 
-import "github.com/rivo/tview"
+import (
+	"github.com/rivo/tview"
+)
 
-func GetControlsTextView() *tview.TextView {
+func GetControlsModal() *tview.TextView {
+	controlsText := `
+    [blue]?[white] Toggle Keyboard Shortcuts
+
+    [blue]k[white] Focus Keyboard Shortcuts
+
+    [blue]Esc[white] Exit Input mode
+
+    HTTP Verbs:
+    [blue]g[white]   GET
+    [blue]p[white]   POST
+    [blue]e[white]   PUT
+    [blue]d[white]   DELETE
+
+    Navigation:
+    [blue]i[white]   Focus URL
+    [blue]r[white]   Focus response
+    [blue]q[white]   Quit
+    `
+
 	controlsTextView := tview.NewTextView().
-		SetDynamicColors(true).
-		SetText(`
-[blue]ctrl+k[white] Toggle Keyboard Shortcuts
-
-[blue]k[white] Focus Keyboard Shortcuts
-
-[red]Esc[white] Exit Input mode
-
-HTTP Verbs:
-[red]g[white]   GET
-[red]p[white]   POST
-[red]e[white]   PUT
-[red]d[white]   DELETE
-
-Navigation:
-[red]i[white]   Focus URL
-[red]r[white]   Focus response
-[red]q[white]   Quit`).
-		SetRegions(true)
+		SetText(controlsText).
+		SetTextAlign(tview.AlignLeft).
+		SetScrollable(true).
+		SetDynamicColors(true)
 
 	return controlsTextView
 }

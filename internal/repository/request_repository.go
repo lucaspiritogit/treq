@@ -7,9 +7,8 @@ import (
 	"path/filepath"
 	"treq/internal/models"
 
-	_ "github.com/mattn/go-sqlite3"
-
 	"github.com/rivo/tview"
+	_ "modernc.org/sqlite"
 )
 
 type RequestRepository struct {
@@ -42,7 +41,7 @@ func NewRequestRepository(list *tview.List, app *tview.Application) (*RequestRep
 		}
 	}
 
-	db, err := sql.Open("sqlite3", dbPath)
+	db, err := sql.Open("sqlite", dbPath)
 	if err != nil {
 		return nil, err
 	}
