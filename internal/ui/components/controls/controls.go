@@ -30,5 +30,7 @@ func GetControlsModal() *tview.TextView {
 		SetScrollable(true).
 		SetDynamicColors(true)
 
+	controlsTextView.SetBorder(true).SetTitle("Controls")
+
 	return controlsTextView
 }

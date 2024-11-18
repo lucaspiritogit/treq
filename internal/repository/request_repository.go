@@ -46,6 +46,7 @@ func NewRequestRepository(list *tview.List, app *tview.Application) (*RequestRep
 		return nil, err
 	}
 	createSavedRequestsTable(db)
+	createSavedHeadersTable(db)
 
 	return &RequestRepository{db: db, DbFilePath: dbPath, list: list, app: app}, nil
 }
@@ -116,10 +117,26 @@ func createSavedRequestsTable(db *sql.DB) error {
 		method TEXT NOT NULL,
 		url TEXT NOT NULL,
 		body TEXT,
-		headers TEXT,
 		created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
 		modified_at DATETIME
 	)`)
+	if err != nil {
+		return fmt.Errorf("could not create table: %v", err)
+	}
+
+	return nil
+}
+
+func createSavedHeadersTable(db *sql.DB) error {
+	_, err := db.Exec(`
+		CREATE TABLE IF NOT EXISTS request_headers (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    request_id INTEGER NOT NULL,
+    header_key TEXT NOT NULL,
+    header_value TEXT NOT NULL,
+    FOREIGN KEY (request_id) REFERENCES saved_requests(id) ON DELETE CASCADE
+);`)
+
 	if err != nil {
 		return fmt.Errorf("could not create table: %v", err)
 	}

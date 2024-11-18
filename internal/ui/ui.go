@@ -19,6 +19,7 @@ import (
 
 func InitializeAppUI(app *tview.Application, requestList *tview.List, requestService *service.RequestService, requestRepository *repository.RequestRepository) *tview.Flex {
 	isControlsModalOpen := false
+	isInputActive := false
 
 	httpVerbDropdown := dropdown.GetHttpVerbDropdown()
 	responseTextView := response.GetResponseTextView()
@@ -72,6 +73,10 @@ func InitializeAppUI(app *tview.Application, requestList *tview.List, requestSer
 	})
 
 	app.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+		if isInputActive {
+			return event
+		}
+
 		saveRequestInput := tview.NewInputField().
 			SetLabel("Request Name: ").
 			SetFieldWidth(20)
@@ -79,10 +84,11 @@ func InitializeAppUI(app *tview.Application, requestList *tview.List, requestSer
 		switch event.Key() {
 		case tcell.KeyCtrlS:
 			app.SetRoot(saveRequestInput, true).SetFocus(saveRequestInput)
-			app.SetInputCapture(nil)
+			isInputActive = true
 
 			saveRequestInput.SetDoneFunc(func(key tcell.Key) {
 				if key == tcell.KeyEnter {
+					isInputActive = false
 					requestName := saveRequestInput.GetText()
 					_, httpMethodCurrentOption := httpVerbDropdown.GetCurrentOption()
 
@@ -90,7 +96,7 @@ func InitializeAppUI(app *tview.Application, requestList *tview.List, requestSer
 						Method:    httpMethodCurrentOption,
 						Title:     requestName,
 						URL:       urlInputField.GetText(),
-						Body:      responseTextView.GetText(false),
+						Body:      requestBody.GetText(),
 						CreatedAt: time.Now(),
 					}
 					err := requestRepository.SaveRequest(savedRequest)
@@ -142,8 +148,21 @@ func InitializeAppUI(app *tview.Application, requestList *tview.List, requestSer
 		case 'k':
 			app.SetFocus(controlsTextView)
 			return nil
+		case 'b':
+			isInputActive = true
+			app.SetFocus(requestBody)
+			return nil
 		case 'q':
 			app.Stop()
+			return nil
+		}
+		return event
+	})
+
+	requestBody.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+		if event.Key() == tcell.KeyEsc {
+			isInputActive = false
+			app.SetFocus(appFlex)
 			return nil
 		}
 		return event
@@ -165,7 +184,7 @@ func InitializeAppUI(app *tview.Application, requestList *tview.List, requestSer
 			}
 
 			urlInputField.SetText(savedRequest.URL)
-			requestBody.SetText("body: " + savedRequest.Body)
+			requestBody.SetText("body: "+savedRequest.Body, false)
 			if index, ok := methodToIndex[savedRequest.Method]; ok {
 				httpVerbDropdown.SetCurrentOption(index)
 			}

@@ -1,6 +1,7 @@
 package service
 
 import (
+	"fmt"
 	"treq/internal/repository"
 
 	"github.com/rivo/tview"
@@ -26,6 +27,18 @@ func (s *RequestService) RefreshRequestsList(requestList *tview.List, requestRep
 
 	for i, request := range savedRequests {
 		requestRepository.RequestListMapIndexToId[i] = request.ID
-		requestList.AddItem(request.Title, request.Method, 0, nil)
+		var httpMethodColor string
+		if request.Method == "GET" {
+			httpMethodColor = "[green]"
+		} else if request.Method == "POST" {
+			httpMethodColor = "[yellow]"
+		} else if request.Method == "PUT" {
+			httpMethodColor = "[blue]"
+		} else if request.Method == "DELETE" {
+			httpMethodColor = "[red]"
+		}
+
+		formatItem := fmt.Sprintf("%s%s[white] %s", httpMethodColor, request.Method, request.Title)
+		requestList.AddItem(formatItem, "", 0, nil)
 	}
 }

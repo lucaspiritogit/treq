@@ -33,9 +33,6 @@ func NewURLInputField(responseView, responseMetadata *tview.TextView, httpVerbDr
 		SetAcceptanceFunc(tview.InputFieldMaxLength(1024)).
 		SetText("https://jsonplaceholder.typicode.com/todos")
 
-	urlField.SetFocusFunc(func() {
-	})
-
 	urlField.SetDoneFunc(urlField.handleKeyPress)
 	return urlField
 }
