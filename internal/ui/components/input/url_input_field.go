@@ -14,24 +14,28 @@ type URLInputField struct {
 	responseView     *tview.TextView
 	responseMetadata *tview.TextView
 	httpVerbDropdown *tview.DropDown
+	headers          *Headers
 	app              *tview.Application
 	isLoading        bool
 }
 
-func NewURLInputField(responseView, responseMetadata *tview.TextView, httpVerbDropdown *tview.DropDown, app *tview.Application) *URLInputField {
+func NewURLInputField(responseView, responseMetadata *tview.TextView, httpVerbDropdown *tview.DropDown, headers *Headers, app *tview.Application) *URLInputField {
 	urlField := &URLInputField{
 		InputField:       tview.NewInputField(),
 		responseView:     responseView,
 		responseMetadata: responseMetadata,
 		httpVerbDropdown: httpVerbDropdown,
+		headers:          headers,
 		app:              app,
 	}
 
 	urlField.
-		SetLabel("URL: ").
 		SetFieldWidth(55).
 		SetAcceptanceFunc(tview.InputFieldMaxLength(1024)).
 		SetText("https://jsonplaceholder.typicode.com/todos")
+
+	urlField.SetFieldTextColor(tcell.ColorBlack)
+	urlField.SetFieldBackgroundColor(tcell.ColorWhite)
 
 	urlField.SetDoneFunc(urlField.handleKeyPress)
 	return urlField
@@ -58,7 +62,7 @@ func (u *URLInputField) executeRequest() {
 	_, verb := u.httpVerbDropdown.GetCurrentOption()
 
 	go func() {
-		result := http_request.FetchUrl(u.GetText(), verb)
+		result := http_request.FetchUrl(u.GetText(), verb, u.headers.GetHeaders())
 
 		u.app.QueueUpdateDraw(func() {
 			formattedBody := colorizeJSON(result.Body)
@@ -70,7 +74,7 @@ func (u *URLInputField) executeRequest() {
 
 			u.isLoading = false
 			u.SetBorderColor(tcell.ColorWhite)
-
+			
 		})
 	}()
 }
@@ -96,9 +100,11 @@ func (u *URLInputField) formatStatusCode(code int) string {
 func (u *URLInputField) Draw(screen tcell.Screen) {
 	if u.isLoading {
 		currentText := u.GetText()
-		u.SetLabel("URL 🔄 ")
+		u.SetLabel("🕛")
 		u.InputField.Draw(screen)
-		u.SetLabel("URL: ")
+		u.SetLabel("🕑")
+		u.InputField.Draw(screen)
+		u.SetLabel("")
 		u.SetText(currentText)
 	} else {
 		u.InputField.Draw(screen)

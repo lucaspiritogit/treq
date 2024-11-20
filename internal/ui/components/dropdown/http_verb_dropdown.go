@@ -7,7 +7,6 @@ import (
 
 func GetHttpVerbDropdown() *tview.DropDown {
 	httpVerbDropdown := tview.NewDropDown().
-		SetLabel("HTTP Verb: ").
 		SetOptions([]string{"GET", "POST", "PUT", "DELETE"}, nil).
 		SetCurrentOption(0)
 

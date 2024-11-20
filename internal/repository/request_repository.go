@@ -77,6 +77,25 @@ func (r *RequestRepository) GetRequestById(id int) models.SavedRequest {
 	return request
 }
 
+func (r *RequestRepository) GetHeadersByRequestId(requestId int) []models.SavedHeaders {
+	var headers []models.SavedHeaders
+
+	rows, err := r.db.Query("SELECT * FROM request_headers WHERE request_id = ? ORDER BY created_at DESC ", requestId)
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	for rows.Next() {
+		var header models.SavedHeaders
+		err = rows.Scan(&header.ID, &header.RequestId, &header.Key, &header.Value, &header.CreatedAt)
+		if err != nil {
+			fmt.Println(err)
+		}
+		headers = append(headers, header)
+	}
+	return headers
+}
+
 func (r *RequestRepository) GetRequests() []models.SavedRequest {
 	var requests []models.SavedRequest
 
@@ -96,10 +115,10 @@ func (r *RequestRepository) GetRequests() []models.SavedRequest {
 	return requests
 }
 
-func (r *RequestRepository) SaveRequest(request models.SavedRequest) error {
-	_, err := r.db.Exec("INSERT INTO saved_requests (method, title, url, body) VALUES (?, ?, ?, ?)", request.Method, request.Title, request.URL, request.Body)
+func (r *RequestRepository) SaveRequest(request models.SavedRequest) (sql.Result, error) {
+	result, err := r.db.Exec("INSERT INTO saved_requests (method, title, url, body) VALUES (?, ?, ?, ?)", request.Method, request.Title, request.URL, request.Body)
 	if err != nil {
-		return fmt.Errorf("could not insert request: %v", err)
+		return nil, fmt.Errorf("could not insert request: %v", err)
 	}
 	savedRequest := models.SavedRequest{
 		Method: request.Method,
@@ -107,6 +126,14 @@ func (r *RequestRepository) SaveRequest(request models.SavedRequest) error {
 	}
 
 	r.list.AddItem(savedRequest.URL, savedRequest.Method, 0, nil)
+	return result, err
+}
+
+func (r *RequestRepository) SaveHeaders(requestId int, headers models.SavedHeaders) error {
+	_, err := r.db.Exec("INSERT INTO request_headers (request_id, header_key, header_value, created_at) VALUES (?, ?, ?, ?)", requestId, headers.Key, headers.Value, headers.CreatedAt)
+	if err != nil {
+		return fmt.Errorf("could not insert headers: %v", err)
+	}
 	return nil
 }
 
@@ -134,6 +161,7 @@ func createSavedHeadersTable(db *sql.DB) error {
     request_id INTEGER NOT NULL,
     header_key TEXT NOT NULL,
     header_value TEXT NOT NULL,
+		created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (request_id) REFERENCES saved_requests(id) ON DELETE CASCADE
 );`)
 

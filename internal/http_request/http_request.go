@@ -11,7 +11,7 @@ type HttpRequest struct {
 	Resp *http.Response
 }
 
-func DoRequest(url string, httpVerb string) *HttpRequest {
+func doRequest(url string, httpVerb string, headers []map[string]string) *HttpRequest {
 	req, err := http.NewRequest(httpVerb, url, nil)
 	if err != nil {
 		log.Fatal(err)
@@ -25,23 +25,27 @@ func DoRequest(url string, httpVerb string) *HttpRequest {
 		log.Fatal(err)
 	}
 
+	for _, header := range headers {
+		req.Header.Add(header["key"], header["value"])
+	}
+
 	defer resp.Body.Close()
 	return &HttpRequest{Body: string(body), Resp: resp}
 }
 
-func FetchUrl(url string, httpVerb string) *HttpRequest {
+func FetchUrl(url string, httpVerb string, headers []map[string]string) *HttpRequest {
 
 	var req *HttpRequest
 
 	switch httpVerb {
 	case "GET":
-		req = DoRequest(url, "GET")
+		req = doRequest(url, "GET", headers)
 	case "POST":
-		req = DoRequest(url, "POST")
+		req = doRequest(url, "POST", headers)
 	case "PUT":
-		req = DoRequest(url, "PUT")
+		req = doRequest(url, "PUT", headers)
 	case "DELETE":
-		req = DoRequest(url, "DELETE")
+		req = doRequest(url, "DELETE", headers)
 	default:
 		log.Fatal("Invalid or not found HTTP Verb")
 		return nil
