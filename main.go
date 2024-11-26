@@ -15,9 +15,9 @@ import (
 func main() {
 	app := tview.NewApplication()
 
-	requestList := request.GetRequestList()
 	appState := state.NewAppState()
 
+	requestList := request.GetRequestList()
 	requestRepository, err := repository.NewRequestRepository(requestList, app)
 	if err != nil {
 		panic(err)
@@ -25,7 +25,8 @@ func main() {
 
 	requestService := service.NewRequestService(requestList, requestRepository)
 	requestService.RefreshRequestsList(requestList, requestRepository)
-
+	app.EnableMouse(true)
+	app.EnablePaste(true)
 	appFlex := ui.InitializeAppUI(app, requestList, requestService, requestRepository, appState)
 
 	if err := app.SetRoot(appFlex, true).Run(); err != nil {

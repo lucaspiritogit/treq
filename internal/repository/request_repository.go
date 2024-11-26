@@ -3,6 +3,7 @@ package repository
 import (
 	"database/sql"
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 	"treq/internal/models"
@@ -77,23 +78,34 @@ func (r *RequestRepository) GetRequestById(id int) models.SavedRequest {
 	return request
 }
 
-func (r *RequestRepository) GetHeadersByRequestId(requestId int) []models.SavedHeaders {
-	var headers []models.SavedHeaders
-
-	rows, err := r.db.Query("SELECT * FROM request_headers WHERE request_id = ? ORDER BY created_at DESC ", requestId)
+func (r *RequestRepository) GetHeadersByRequestId(requestId int) map[int][]models.SavedHeaders {
+	query := `
+		SELECT id, header_key, header_value, page, created_at
+		FROM request_headers
+		WHERE request_id = ?
+		ORDER BY page, id
+	`
+	rows, err := r.db.Query(query, requestId)
 	if err != nil {
-		fmt.Println(err)
+		log.Printf("Error retrieving headers: %v", err)
+		return nil
 	}
+	defer rows.Close()
+
+	headersByPage := make(map[int][]models.SavedHeaders)
 
 	for rows.Next() {
 		var header models.SavedHeaders
-		err = rows.Scan(&header.ID, &header.RequestId, &header.Key, &header.Value, &header.CreatedAt)
+		err := rows.Scan(&header.ID, &header.Key, &header.Value, &header.Page, &header.CreatedAt)
 		if err != nil {
-			fmt.Println(err)
+			log.Printf("Error scanning header row: %v", err)
+			continue
 		}
-		headers = append(headers, header)
+
+		headersByPage[header.Page] = append(headersByPage[header.Page], header)
 	}
-	return headers
+
+	return headersByPage
 }
 
 func (r *RequestRepository) GetRequests() []models.SavedRequest {
@@ -129,11 +141,34 @@ func (r *RequestRepository) SaveRequest(request models.SavedRequest) (sql.Result
 	return result, err
 }
 
-func (r *RequestRepository) SaveHeaders(requestId int, headers models.SavedHeaders) error {
-	_, err := r.db.Exec("INSERT INTO request_headers (request_id, header_key, header_value, created_at) VALUES (?, ?, ?, ?)", requestId, headers.Key, headers.Value, headers.CreatedAt)
+func (r *RequestRepository) SaveHeaders(requestId int, headers []models.SavedHeaders) error {
+	tx, err := r.db.Begin()
 	if err != nil {
-		return fmt.Errorf("could not insert headers: %v", err)
+		return fmt.Errorf("could not begin transaction: %v", err)
 	}
+	defer tx.Rollback()
+
+	stmt, err := tx.Prepare("INSERT INTO request_headers (request_id, header_key, header_value, page, created_at) VALUES (?, ?, ?, ?, ?)")
+	if err != nil {
+		return fmt.Errorf("could not prepare statement: %v", err)
+	}
+	defer stmt.Close()
+
+	for _, header := range headers {
+		// if header.Key == "" && header.Value == "" {
+		// 	continue
+		// }
+
+		_, err = stmt.Exec(requestId, header.Key, header.Value, header.Page, header.CreatedAt)
+		if err != nil {
+			return fmt.Errorf("could not insert header: %v", err)
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("could not commit transaction: %v", err)
+	}
+
 	return nil
 }
 
@@ -161,6 +196,7 @@ func createSavedHeadersTable(db *sql.DB) error {
     request_id INTEGER NOT NULL,
     header_key TEXT NOT NULL,
     header_value TEXT NOT NULL,
+		page INTEGER NOT NULL,
 		created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (request_id) REFERENCES saved_requests(id) ON DELETE CASCADE
 );`)

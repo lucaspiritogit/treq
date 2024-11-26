@@ -69,7 +69,7 @@ func InitializeAppUI(app *tview.Application, requestList *tview.List, requestSer
 				AddItem(
 					tview.NewFlex().SetDirection(tview.FlexRow).
 						AddItem(inputArea, 1, 0, false).
-						AddItem(headersContainer, 8, 0, false).
+						AddItem(headersContainer, 6, 1, false).
 						AddItem(spacer, 0, 1, false).
 						AddItem(responseMetadata, 1, 0, false).
 						AddItem(
@@ -145,25 +145,24 @@ func InitializeAppUI(app *tview.Application, requestList *tview.List, requestSer
 					}
 					requestId := int(insertedId)
 
-					for i := 0; i < headers.Rows.GetItemCount(); i++ {
-						row := headers.Rows.GetItem(i).(*tview.Flex)
-
-						inputKey := row.GetItem(i).(*tview.InputField)
-						inputValue := row.GetItem(i + 1).(*tview.InputField)
-						key := inputKey.GetText()
-						value := inputValue.GetText()
-
-						savedHeader := models.SavedHeaders{
-							RequestId: requestId,
-							Key:       key,
-							Value:     value,
-							CreatedAt: time.Now(),
+					savedHeaders := []models.SavedHeaders{}
+					for page := 0; page < headers.TotalPages; page++ {
+						for _, headerData := range headers.HeaderPages[page] {
+							savedHeader := models.SavedHeaders{
+								RequestId: requestId,
+								Key:       headerData["key"],
+								Value:     headerData["value"],
+								Page:      page,
+								CreatedAt: time.Now(),
+							}
+							savedHeaders = append(savedHeaders, savedHeader)
 						}
-						err := requestRepository.SaveHeaders(requestId, savedHeader)
-						if err != nil {
-							modal.ShowErrorModal(app, appFlex, err.Error())
-							return
-						}
+					}
+
+					a := requestRepository.SaveHeaders(requestId, savedHeaders)
+					if a != nil {
+						modal.ShowErrorModal(app, appFlex, a.Error())
+						return
 					}
 
 					requestService.RefreshRequestsList(requestList, requestRepository)
@@ -240,6 +239,7 @@ func InitializeAppUI(app *tview.Application, requestList *tview.List, requestSer
 			return nil
 		}
 		if event.Key() == tcell.KeyEnter {
+			headers.HeaderPages = map[int][]map[string]string{}
 			index := requestList.GetCurrentItem()
 			savedRequest := requestRepository.GetRequestById(index)
 			methodToIndex := map[string]int{
@@ -250,16 +250,26 @@ func InitializeAppUI(app *tview.Application, requestList *tview.List, requestSer
 			}
 
 			savedHeaders := requestRepository.GetHeadersByRequestId(savedRequest.ID)
-			for i := 0; i < headers.Rows.GetItemCount(); i++ {
-				row := headers.Rows.GetItem(i).(*tview.Flex)
-				inputKey := row.GetItem(i).(*tview.InputField)
-				inputValue := row.GetItem(i + 1).(*tview.InputField)
-				inputKey.SetText(savedHeaders[i].Key)
-				inputValue.SetText(savedHeaders[i].Value)
+			for page, pageHeaders := range savedHeaders {
+				if len(pageHeaders) > 0 {
+					if headers.HeaderPages[page] == nil {
+						headers.HeaderPages[page] = []map[string]string{}
+					}
 
+					for _, header := range pageHeaders {
+						headers.HeaderPages[page] = append(headers.HeaderPages[page], map[string]string{
+							"key":   header.Key,
+							"value": header.Value,
+						})
+					}
+				}
 			}
+
+			headers.TotalPages = len(savedHeaders)
+			headers.UpdatePageDisplay(app, appState)
 			urlInputField.SetText(savedRequest.URL)
 			requestBody.SetText(savedRequest.Body, false)
+
 			if index, ok := methodToIndex[savedRequest.Method]; ok {
 				httpVerbDropdown.SetCurrentOption(index)
 			}
