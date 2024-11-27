@@ -19,7 +19,7 @@ type URLInputField struct {
 	isLoading        bool
 }
 
-func NewURLInputField(responseView, responseMetadata *tview.TextView, httpVerbDropdown *tview.DropDown, headers *Headers, app *tview.Application) *URLInputField {
+func NewURLInputField(responseView *tview.TextView, responseMetadata *tview.TextView, httpVerbDropdown *tview.DropDown, headers *Headers, app *tview.Application) *URLInputField {
 	urlField := &URLInputField{
 		InputField:       tview.NewInputField(),
 		responseView:     responseView,
@@ -31,8 +31,7 @@ func NewURLInputField(responseView, responseMetadata *tview.TextView, httpVerbDr
 
 	urlField.
 		SetFieldWidth(55).
-		SetAcceptanceFunc(tview.InputFieldMaxLength(1024)).
-		SetText("https://jsonplaceholder.typicode.com/todos")
+		SetAcceptanceFunc(tview.InputFieldMaxLength(1024))
 
 	urlField.SetFieldTextColor(tcell.ColorBlack)
 	urlField.SetFieldBackgroundColor(tcell.ColorWhite)
@@ -74,7 +73,7 @@ func (u *URLInputField) executeRequest() {
 
 			u.isLoading = false
 			u.SetBorderColor(tcell.ColorWhite)
-			
+
 		})
 	}()
 }

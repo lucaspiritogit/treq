@@ -1,15 +1,23 @@
 package state
 
-import "sync"
+import (
+	"sync"
+
+	"github.com/rivo/tview"
+)
 
 type AppState struct {
-	isInputActive bool
-	mu            sync.Mutex
+	isInputActive    bool
+	mu               sync.Mutex
+	AppFlexContainer *tview.Flex
+	App              *tview.Application
 }
 
-func NewAppState() *AppState {
+func NewAppState(appFlexContainer *tview.Flex, app *tview.Application) *AppState {
 	return &AppState{
-		isInputActive: false,
+		isInputActive:    false,
+		AppFlexContainer: appFlexContainer,
+		App:              app,
 	}
 }
 
@@ -23,4 +31,8 @@ func (s *AppState) IsInputActive() bool {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	return s.isInputActive
+}
+
+func (s *AppState) FocusAppFlexContainer() {
+	s.App.SetFocus(s.AppFlexContainer)
 }

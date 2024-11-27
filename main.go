@@ -5,7 +5,6 @@ import (
 	"treq/internal/service"
 	"treq/internal/ui"
 	"treq/internal/ui/components/request"
-	"treq/internal/ui/state"
 
 	_ "modernc.org/sqlite"
 
@@ -14,8 +13,6 @@ import (
 
 func main() {
 	app := tview.NewApplication()
-
-	appState := state.NewAppState()
 
 	requestList := request.GetRequestList()
 	requestRepository, err := repository.NewRequestRepository(requestList, app)
@@ -27,7 +24,7 @@ func main() {
 	requestService.RefreshRequestsList(requestList, requestRepository)
 	app.EnableMouse(true)
 	app.EnablePaste(true)
-	appFlex := ui.InitializeAppUI(app, requestList, requestService, requestRepository, appState)
+	appFlex := ui.InitializeAppUI(app, requestList, requestService, requestRepository)
 
 	if err := app.SetRoot(appFlex, true).Run(); err != nil {
 		panic(err)

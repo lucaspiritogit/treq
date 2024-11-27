@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"treq/internal/repository"
 
+	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
 )
 
@@ -39,6 +40,7 @@ func (s *RequestService) RefreshRequestsList(requestList *tview.List, requestRep
 		}
 
 		formatItem := fmt.Sprintf("%s%s[white] %s", httpMethodColor, request.Method, request.Title)
+		requestList.SetSelectedBackgroundColor(tcell.ColorLawnGreen)
 		requestList.AddItem(formatItem, "", 0, nil)
 	}
 }

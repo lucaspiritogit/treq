@@ -1,7 +1,6 @@
 package ui
 
 import (
-	"sync"
 	"time"
 	"treq/internal/constants"
 	"treq/internal/models"
@@ -19,30 +18,18 @@ import (
 	"github.com/rivo/tview"
 )
 
-type AppState struct {
-	isInputActive bool
-	mu            sync.Mutex
-}
+func InitializeAppUI(app *tview.Application, requestList *tview.List, requestService *service.RequestService, requestRepository *repository.RequestRepository) *tview.Flex {
 
-func (s *AppState) SetInputActive(active bool) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	s.isInputActive = active
-}
-
-func (s *AppState) IsInputActive() bool {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	return s.isInputActive
-}
-
-func InitializeAppUI(app *tview.Application, requestList *tview.List, requestService *service.RequestService, requestRepository *repository.RequestRepository, appState *state.AppState) *tview.Flex {
 	isControlsModalOpen := false
-
 	spacer := tview.NewBox()
+	appFlexContainer := tview.NewFlex().SetDirection(tview.FlexRow)
+	appState := state.NewAppState(appFlexContainer, app)
+
 	httpVerbDropdown := dropdown.GetHttpVerbDropdown()
-	httpVerbDropdown.SetBorderPadding(0, 0, 1, 0)
-	responseTextView := response.GetResponseTextView()
+
+	responseTextView := response.NewResponseTextView(app, appState)
+	responseTextView.Build()
+
 	responseMetadata := response.GetResponseMetadataTextView()
 	requestBody := request.GetRequestBody()
 	controlsTextView := controls.GetControlsModal()
@@ -50,7 +37,7 @@ func InitializeAppUI(app *tview.Application, requestList *tview.List, requestSer
 	headers := input.NewHeaders()
 	headersContainer := headers.GetHeadersContainer(app, appState)
 
-	urlInputField := input.NewURLInputField(responseTextView, responseMetadata, httpVerbDropdown, headers, app)
+	urlInputField := input.NewURLInputField(responseTextView.View, responseMetadata, httpVerbDropdown, headers, app)
 	inputArea := tview.NewFlex().
 		SetDirection(tview.FlexColumn).
 		AddItem(httpVerbDropdown, 6, 0, false).
@@ -58,11 +45,11 @@ func InitializeAppUI(app *tview.Application, requestList *tview.List, requestSer
 
 	shortcutsTextView := tview.NewTextView().
 		SetDynamicColors(true).
-		SetText("[blue]?[white] Show controls | [blue]q[white] Quit | [blue]i[white] Input mode | [blue]b[white] Request body | [blue]r[white] Response body").
+		SetText("[blue]?[white] Show controls | [blue]q[white] Quit | [blue]i[white] URL | [blue]b[white] body | [blue]r[white] Response body").
 		SetScrollable(false).
 		SetWrap(true)
 
-	appFlex := tview.NewFlex().SetDirection(tview.FlexRow).
+	appFlexContainer.
 		AddItem(
 			tview.NewFlex().SetDirection(tview.FlexColumn).
 				AddItem(requestList, 25, 0, false).
@@ -75,27 +62,18 @@ func InitializeAppUI(app *tview.Application, requestList *tview.List, requestSer
 						AddItem(
 							tview.NewFlex().SetDirection(tview.FlexColumn).
 								AddItem(requestBody, 0, 1, false).
-								AddItem(responseTextView, 0, 1, false),
+								AddItem(responseTextView.View, 0, 1, false),
 							0, 8, false),
 					0, 1, false),
 			0, 1, false).
 		AddItem(shortcutsTextView, 2, 0, false)
 
-	headers.SetAppFlex(appFlex)
+	headers.SetAppFlex(appFlexContainer)
 
 	urlInputField.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 		if event.Key() == tcell.KeyEsc {
 			appState.SetInputActive(false)
-			app.SetFocus(appFlex)
-			return nil
-		}
-		return event
-	})
-
-	responseTextView.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
-		if event.Key() == tcell.KeyEsc {
-			appState.SetInputActive(false)
-			app.SetFocus(appFlex)
+			app.SetFocus(appFlexContainer)
 			return nil
 		}
 		return event
@@ -122,7 +100,7 @@ func InitializeAppUI(app *tview.Application, requestList *tview.List, requestSer
 					_, httpMethodCurrentOption := httpVerbDropdown.GetCurrentOption()
 
 					if requestName == "" {
-						modal.ShowErrorModal(app, appFlex, "Provide a name to save the request. You'll thank yourself later.")
+						modal.ShowErrorModal(app, appFlexContainer, "Provide a name to save the request. You'll thank yourself later.")
 						return
 					}
 
@@ -135,12 +113,12 @@ func InitializeAppUI(app *tview.Application, requestList *tview.List, requestSer
 					}
 					result, err := requestRepository.SaveRequest(savedRequest)
 					if err != nil {
-						modal.ShowErrorModal(app, appFlex, err.Error())
+						modal.ShowErrorModal(app, appFlexContainer, err.Error())
 						return
 					}
 					insertedId, err := result.LastInsertId()
 					if err != nil {
-						modal.ShowErrorModal(app, appFlex, err.Error())
+						modal.ShowErrorModal(app, appFlexContainer, err.Error())
 						return
 					}
 					requestId := int(insertedId)
@@ -161,21 +139,21 @@ func InitializeAppUI(app *tview.Application, requestList *tview.List, requestSer
 
 					a := requestRepository.SaveHeaders(requestId, savedHeaders)
 					if a != nil {
-						modal.ShowErrorModal(app, appFlex, a.Error())
+						modal.ShowErrorModal(app, appFlexContainer, a.Error())
 						return
 					}
 
 					requestService.RefreshRequestsList(requestList, requestRepository)
-					app.SetRoot(appFlex, true)
+					app.SetRoot(appFlexContainer, true)
 					app.SetFocus(requestList)
 				} else if key == tcell.KeyEsc {
-					app.SetRoot(appFlex, true)
+					app.SetRoot(appFlexContainer, true)
 					app.SetFocus(requestList)
 				}
 			})
 			return nil
 		case tcell.KeyLeft:
-			if app.GetFocus() == responseTextView || app.GetFocus() == requestBody || app.GetFocus() == urlInputField {
+			if app.GetFocus() == responseTextView.View || app.GetFocus() == requestBody || app.GetFocus() == urlInputField {
 				return nil
 			}
 			app.SetFocus(requestList)
@@ -183,7 +161,7 @@ func InitializeAppUI(app *tview.Application, requestList *tview.List, requestSer
 		switch event.Rune() {
 		case '?':
 			if isControlsModalOpen {
-				app.SetRoot(appFlex, true)
+				app.SetRoot(appFlexContainer, true)
 			} else {
 				app.SetRoot(controlsTextView, true)
 			}
@@ -194,7 +172,7 @@ func InitializeAppUI(app *tview.Application, requestList *tview.List, requestSer
 			app.SetFocus(urlInputField)
 			return nil
 		case 'r':
-			app.SetFocus(responseTextView)
+			app.SetFocus(responseTextView.View)
 			return nil
 		case 'p':
 			httpVerbDropdown.SetCurrentOption(constants.HTTPVerbPostDropwdownIndex)
@@ -227,7 +205,7 @@ func InitializeAppUI(app *tview.Application, requestList *tview.List, requestSer
 	requestBody.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 		if event.Key() == tcell.KeyEsc {
 			appState.SetInputActive(false)
-			app.SetFocus(appFlex)
+			app.SetFocus(appFlexContainer)
 			return nil
 		}
 		return event
@@ -235,7 +213,7 @@ func InitializeAppUI(app *tview.Application, requestList *tview.List, requestSer
 
 	requestList.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 		if event.Key() == tcell.KeyEsc {
-			app.SetFocus(appFlex)
+			app.SetFocus(appFlexContainer)
 			return nil
 		}
 		if event.Key() == tcell.KeyEnter {
@@ -250,10 +228,14 @@ func InitializeAppUI(app *tview.Application, requestList *tview.List, requestSer
 			}
 
 			savedHeaders := requestRepository.GetHeadersByRequestId(savedRequest.ID)
+			if len(savedHeaders) == 0 {
+				return nil
+			}
 			for page, pageHeaders := range savedHeaders {
 				if len(pageHeaders) > 0 {
 					if headers.HeaderPages[page] == nil {
 						headers.HeaderPages[page] = []map[string]string{}
+						headers.AddHeadersRow(app, "", "", appState)
 					}
 
 					for _, header := range pageHeaders {
@@ -291,5 +273,5 @@ func InitializeAppUI(app *tview.Application, requestList *tview.List, requestSer
 		return event
 	})
 
-	return appFlex
+	return appFlexContainer
 }

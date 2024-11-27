@@ -6,6 +6,6 @@ func GetRequestBody() *tview.TextArea {
 	requestBody := tview.NewTextArea().
 		SetWrap(true)
 
-	requestBody.SetTitle("Request Body").SetBorder(true)
+	requestBody.SetTitle("Body").SetBorder(true)
 	return requestBody
 }
