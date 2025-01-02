@@ -8,6 +8,8 @@ func GetControlsModal() *tview.TextView {
 	controlsText := `
     [blue]?[white] Toggle Keyboard Shortcuts
 
+    [blue]CTRL + S[white] Save Request
+
     [blue]k[white] Focus Keyboard Shortcuts
 
     [blue]Esc[white] Exit Input mode

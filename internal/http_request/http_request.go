@@ -11,14 +11,14 @@ type HttpRequest struct {
 	Resp *http.Response
 }
 
-func doRequest(url string, httpVerb string, headers []map[string]string) *HttpRequest {
+func doRequest(url string, httpVerb string, headers []map[string]string) (*HttpRequest, error) {
 	req, err := http.NewRequest(httpVerb, url, nil)
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
@@ -30,26 +30,13 @@ func doRequest(url string, httpVerb string, headers []map[string]string) *HttpRe
 	}
 
 	defer resp.Body.Close()
-	return &HttpRequest{Body: string(body), Resp: resp}
+	return &HttpRequest{Body: string(body), Resp: resp}, nil
 }
 
-func FetchUrl(url string, httpVerb string, headers []map[string]string) *HttpRequest {
-
-	var req *HttpRequest
-
-	switch httpVerb {
-	case "GET":
-		req = doRequest(url, "GET", headers)
-	case "POST":
-		req = doRequest(url, "POST", headers)
-	case "PUT":
-		req = doRequest(url, "PUT", headers)
-	case "DELETE":
-		req = doRequest(url, "DELETE", headers)
-	default:
-		log.Fatal("Invalid or not found HTTP Verb")
-		return nil
+func FetchUrl(url string, httpVerb string, headers []map[string]string) (*HttpRequest, error) {
+	req, err := doRequest(url, httpVerb, headers)
+	if err != nil {
+		return nil, err
 	}
-
-	return &HttpRequest{Body: string(req.Body), Resp: req.Resp}
+	return &HttpRequest{Body: string(req.Body), Resp: req.Resp}, nil
 }

@@ -61,19 +61,24 @@ func (u *URLInputField) executeRequest() {
 	_, verb := u.httpVerbDropdown.GetCurrentOption()
 
 	go func() {
-		result := http_request.FetchUrl(u.GetText(), verb, u.headers.GetHeaders())
-
+		result, err := http_request.FetchUrl(u.GetText(), verb, u.headers.GetHeaders())
+		if err != nil {
+			u.app.QueueUpdateDraw(func() {
+				u.responseView.SetText("[red]Error: [white]Failed to fetch URL")
+				u.responseMetadata.SetText(fmt.Sprintf("%s [white]Content-Length: [blue]%d", "-", 0))
+				u.SetBorderColor(tcell.ColorRed)
+				u.isLoading = false
+			})
+			return
+		}
 		u.app.QueueUpdateDraw(func() {
 			formattedBody := colorizeJSON(result.Body)
 			u.responseView.SetText(formattedBody)
 			statusText := u.formatStatusCode(result.Resp.StatusCode)
 			contentLength := len(result.Body)
-			u.responseMetadata.SetText(fmt.Sprintf("%s [white]Content-Length: [blue]%d",
-				statusText, contentLength))
-
+			u.responseMetadata.SetText(fmt.Sprintf("%s [white]Content-Length: [blue]%d", statusText, contentLength))
 			u.isLoading = false
 			u.SetBorderColor(tcell.ColorWhite)
-
 		})
 	}()
 }

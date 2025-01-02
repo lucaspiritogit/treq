@@ -4,6 +4,18 @@
 
 Make HTTP requests from your terminal, and save them with an embedded sqlite datababase.
 
+# How to use
+
+## From source
+
+⚠️ Checksum verification is on its way, always be sure what .exe you are executing in your machine.
+I recommend to build/execute from source using golang 1.22 and cloning or forking the repo.
+
+## From releases
+
+1. Go to the [releases](https://github.com/lucaspiritogit/treq/releases) page and download the latest package of your OS.
+2. Use the `treq.exe` program from a terminal to open up **treq**
+
 ## Where is the DB saved?
 
 Depending on your OS, the sqlite db is saved on these locations:
@@ -34,3 +46,4 @@ As of right now, treq is still a WIP, so the code can be messy at times. If you 
 - QA
 - Themes
 - Assure it works con all OS
+- More response metadata

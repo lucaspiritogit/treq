@@ -21,7 +21,7 @@ func NewResponseTextView(app *tview.Application, state *state.AppState) *Respons
 	}
 }
 
-func (r *ResponseTextView) Build(){
+func (r *ResponseTextView) Build() {
 	r.View.SetDynamicColors(true).
 		SetRegions(true).
 		SetWrap(true).

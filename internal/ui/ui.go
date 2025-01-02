@@ -45,7 +45,7 @@ func InitializeAppUI(app *tview.Application, requestList *tview.List, requestSer
 
 	shortcutsTextView := tview.NewTextView().
 		SetDynamicColors(true).
-		SetText("[blue]?[white] Show controls | [blue]q[white] Quit | [blue]i[white] URL | [blue]b[white] body | [blue]r[white] Response body").
+		SetText("[blue]?[white] Show controls | [blue]Ctrl + s[white] Save req | [blue]q[white] Quit | [blue]i[white] URL | [blue]b[white] Body | [blue]r[white] Response body").
 		SetScrollable(false).
 		SetWrap(true)
 
@@ -84,23 +84,26 @@ func InitializeAppUI(app *tview.Application, requestList *tview.List, requestSer
 			return event
 		}
 
-		saveRequestInput := tview.NewInputField().
+		requestNameInputField := tview.NewInputField().
 			SetLabel("Request Name: ").
 			SetFieldWidth(20)
 
 		switch event.Key() {
 		case tcell.KeyCtrlS:
-			app.SetRoot(saveRequestInput, true).SetFocus(saveRequestInput)
+			index := requestList.GetCurrentItem()
+			existingRequest := requestRepository.GetRequestById(index)
+
+			app.SetRoot(requestNameInputField, true).SetFocus(requestNameInputField)
 			appState.SetInputActive(true)
 
-			saveRequestInput.SetDoneFunc(func(key tcell.Key) {
+			requestNameInputField.SetDoneFunc(func(key tcell.Key) {
 				if key == tcell.KeyEnter {
 					appState.SetInputActive(false)
-					requestName := saveRequestInput.GetText()
+					requestName := requestNameInputField.GetText()
 					_, httpMethodCurrentOption := httpVerbDropdown.GetCurrentOption()
 
 					if requestName == "" {
-						modal.ShowErrorModal(app, appFlexContainer, "Provide a name to save the request. You'll thank yourself later.")
+						modal.ShowErrorModal(app, appFlexContainer, "Provide a name to save the request.")
 						return
 					}
 
@@ -111,38 +114,34 @@ func InitializeAppUI(app *tview.Application, requestList *tview.List, requestSer
 						Body:      requestBody.GetText(),
 						CreatedAt: time.Now(),
 					}
-					result, err := requestRepository.SaveRequest(savedRequest)
-					if err != nil {
-						modal.ShowErrorModal(app, appFlexContainer, err.Error())
-						return
-					}
-					insertedId, err := result.LastInsertId()
-					if err != nil {
-						modal.ShowErrorModal(app, appFlexContainer, err.Error())
-						return
-					}
-					requestId := int(insertedId)
-
-					savedHeaders := []models.SavedHeaders{}
-					for page := 0; page < headers.TotalPages; page++ {
-						for _, headerData := range headers.HeaderPages[page] {
-							savedHeader := models.SavedHeaders{
-								RequestId: requestId,
-								Key:       headerData["key"],
-								Value:     headerData["value"],
-								Page:      page,
-								CreatedAt: time.Now(),
+					if existingRequest.ID != 0 {
+						requestRepository.UpdateRequest(savedRequest, index)
+						requestService.RefreshRequestsList(requestList, requestRepository)
+						savedHeaders := []models.SavedHeaders{}
+						for page := 0; page < headers.TotalPages; page++ {
+							for _, headerData := range headers.HeaderPages[page] {
+								savedHeader := models.SavedHeaders{
+									RequestId: existingRequest.ID,
+									Key:       headerData["key"],
+									Value:     headerData["value"],
+									Page:      page,
+									CreatedAt: time.Now(),
+								}
+								savedHeaders = append(savedHeaders, savedHeader)
 							}
-							savedHeaders = append(savedHeaders, savedHeader)
 						}
-					}
 
-					a := requestRepository.SaveHeaders(requestId, savedHeaders)
-					if a != nil {
-						modal.ShowErrorModal(app, appFlexContainer, a.Error())
+						a := requestRepository.SaveHeaders(existingRequest.ID, savedHeaders)
+						if a != nil {
+							modal.ShowErrorModal(app, appFlexContainer, a.Error())
+							return
+						}
+
+						app.SetRoot(appFlexContainer, true)
+						app.SetFocus(requestList)
 						return
 					}
-
+					createRequest(requestRepository, savedRequest, app, appFlexContainer, headers)
 					requestService.RefreshRequestsList(requestList, requestRepository)
 					app.SetRoot(appFlexContainer, true)
 					app.SetFocus(requestList)
@@ -152,6 +151,37 @@ func InitializeAppUI(app *tview.Application, requestList *tview.List, requestSer
 				}
 			})
 			return nil
+		case tcell.KeyCtrlN:
+			app.SetRoot(requestNameInputField, true).SetFocus(requestNameInputField)
+			appState.SetInputActive(true)
+
+			requestNameInputField.SetDoneFunc(func(key tcell.Key) {
+				if key == tcell.KeyEnter {
+					appState.SetInputActive(false)
+					requestName := requestNameInputField.GetText()
+					_, httpMethodCurrentOption := httpVerbDropdown.GetCurrentOption()
+
+					if requestName == "" {
+						modal.ShowErrorModal(app, appFlexContainer, "Provide a name to save the request.")
+						return
+					}
+
+					savedRequest := models.SavedRequest{
+						Method:    httpMethodCurrentOption,
+						Title:     requestName,
+						URL:       urlInputField.GetText(),
+						Body:      requestBody.GetText(),
+						CreatedAt: time.Now(),
+					}
+					createRequest(requestRepository, savedRequest, app, appFlexContainer, headers)
+					requestService.RefreshRequestsList(requestList, requestRepository)
+					app.SetRoot(appFlexContainer, true)
+					app.SetFocus(requestList)
+				} else if key == tcell.KeyEsc {
+					app.SetRoot(appFlexContainer, true)
+					app.SetFocus(requestList)
+				}
+			})
 		case tcell.KeyLeft:
 			if app.GetFocus() == responseTextView.View || app.GetFocus() == requestBody || app.GetFocus() == urlInputField {
 				return nil
@@ -219,7 +249,7 @@ func InitializeAppUI(app *tview.Application, requestList *tview.List, requestSer
 		if event.Key() == tcell.KeyEnter {
 			headers.HeaderPages = map[int][]map[string]string{}
 			index := requestList.GetCurrentItem()
-			savedRequest := requestRepository.GetRequestById(index)
+			existingRequest := requestRepository.GetRequestById(index)
 			methodToIndex := map[string]int{
 				"GET":    constants.HTTPVerbGetDropdownIndex,
 				"POST":   constants.HTTPVerbPostDropwdownIndex,
@@ -227,10 +257,7 @@ func InitializeAppUI(app *tview.Application, requestList *tview.List, requestSer
 				"DELETE": constants.HTTPVerbDeleteDropdownIndex,
 			}
 
-			savedHeaders := requestRepository.GetHeadersByRequestId(savedRequest.ID)
-			if len(savedHeaders) == 0 {
-				return nil
-			}
+			savedHeaders := requestRepository.GetHeadersByRequestId(existingRequest.ID)
 			for page, pageHeaders := range savedHeaders {
 				if len(pageHeaders) > 0 {
 					if headers.HeaderPages[page] == nil {
@@ -249,10 +276,10 @@ func InitializeAppUI(app *tview.Application, requestList *tview.List, requestSer
 
 			headers.TotalPages = len(savedHeaders)
 			headers.UpdatePageDisplay(app, appState)
-			urlInputField.SetText(savedRequest.URL)
-			requestBody.SetText(savedRequest.Body, false)
+			urlInputField.SetText(existingRequest.URL)
+			requestBody.SetText(existingRequest.Body, false)
 
-			if index, ok := methodToIndex[savedRequest.Method]; ok {
+			if index, ok := methodToIndex[existingRequest.Method]; ok {
 				httpVerbDropdown.SetCurrentOption(index)
 			}
 			app.SetFocus(urlInputField)
@@ -274,4 +301,38 @@ func InitializeAppUI(app *tview.Application, requestList *tview.List, requestSer
 	})
 
 	return appFlexContainer
+}
+
+func createRequest(requestRepository *repository.RequestRepository, savedRequest models.SavedRequest, app *tview.Application, appFlexContainer *tview.Flex, headers *input.Headers) {
+	result, err := requestRepository.SaveRequest(savedRequest)
+	if err != nil {
+		modal.ShowErrorModal(app, appFlexContainer, err.Error())
+		return
+	}
+	insertedId, err := result.LastInsertId()
+	if err != nil {
+		modal.ShowErrorModal(app, appFlexContainer, err.Error())
+		return
+	}
+	requestId := int(insertedId)
+
+	savedHeaders := []models.SavedHeaders{}
+	for page := 0; page < headers.TotalPages; page++ {
+		for _, headerData := range headers.HeaderPages[page] {
+			savedHeader := models.SavedHeaders{
+				RequestId: requestId,
+				Key:       headerData["key"],
+				Value:     headerData["value"],
+				Page:      page,
+				CreatedAt: time.Now(),
+			}
+			savedHeaders = append(savedHeaders, savedHeader)
+		}
+	}
+
+	a := requestRepository.SaveHeaders(requestId, savedHeaders)
+	if a != nil {
+		modal.ShowErrorModal(app, appFlexContainer, a.Error())
+		return
+	}
 }

@@ -22,6 +22,9 @@ type RequestRepository struct {
 
 type IRequestRepository interface {
 	SaveRequest(request models.SavedRequest)
+	UpdateRequest(request models.SavedRequest, id int)
+	SaveHeaders(requestId int, headers []models.SavedHeaders) error
+	UpdateHeaders(requestId int, headers []models.SavedHeaders) error
 	GetRequests() []models.SavedRequest
 	GetRequestById(id int) []models.SavedRequest
 	DeleteRequestById(id int) error
@@ -50,6 +53,18 @@ func NewRequestRepository(list *tview.List, app *tview.Application) (*RequestRep
 	createSavedHeadersTable(db)
 
 	return &RequestRepository{db: db, DbFilePath: dbPath, list: list, app: app}, nil
+}
+
+func (r *RequestRepository) UpdateRequest(request models.SavedRequest, id int) error {
+	itemId, exists := r.RequestListMapIndexToId[id]
+	if !exists {
+		return fmt.Errorf("no request found for index %d", itemId)
+	}
+	_, err := r.db.Exec("UPDATE saved_requests SET title = ?, method = ?, url = ?, body = ? WHERE id = ?", request.Title, request.Method, request.URL, request.Body, itemId)
+	if err != nil {
+		return fmt.Errorf("could not update request: %v", err)
+	}
+	return nil
 }
 
 func (r *RequestRepository) DeleteRequestById(id int) error {
@@ -162,6 +177,37 @@ func (r *RequestRepository) SaveHeaders(requestId int, headers []models.SavedHea
 		_, err = stmt.Exec(requestId, header.Key, header.Value, header.Page, header.CreatedAt)
 		if err != nil {
 			return fmt.Errorf("could not insert header: %v", err)
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("could not commit transaction: %v", err)
+	}
+
+	return nil
+}
+
+func (r *RequestRepository) UpdateHeaders(requestId int, headers []models.SavedHeaders) error {
+	tx, err := r.db.Begin()
+	if err != nil {
+		return fmt.Errorf("could not begin transaction: %v", err)
+	}
+	defer tx.Rollback()
+
+	stmt, err := tx.Prepare("UPDATE request_headers SET header_key = ?, header_value = ?, page = ?, created_at = ? WHERE id = ?")
+	if err != nil {
+		return fmt.Errorf("could not prepare statement: %v", err)
+	}
+	defer stmt.Close()
+
+	for _, header := range headers {
+		// if header.Key == "" && header.Value == "" {
+		// 	continue
+		// }
+
+		_, err = stmt.Exec(header.Key, header.Value, header.Page, header.CreatedAt, header.ID)
+		if err != nil {
+			return fmt.Errorf("could not update header: %v", err)
 		}
 	}
 

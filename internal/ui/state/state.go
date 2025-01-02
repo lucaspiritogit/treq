@@ -34,5 +34,6 @@ func (s *AppState) IsInputActive() bool {
 }
 
 func (s *AppState) FocusAppFlexContainer() {
+	s.SetInputActive(false)
 	s.App.SetFocus(s.AppFlexContainer)
 }
