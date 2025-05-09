@@ -15,7 +15,7 @@ import (
 type RequestRepository struct {
 	DbFilePath              string
 	db                      *sql.DB
-	list                    *tview.List
+	list                    *tview.TreeView
 	app                     *tview.Application
 	RequestListMapIndexToId map[int]int
 }
@@ -30,7 +30,7 @@ type IRequestRepository interface {
 	DeleteRequestById(id int) error
 }
 
-func NewRequestRepository(list *tview.List, app *tview.Application) (*RequestRepository, error) {
+func NewRequestRepository(list *tview.TreeView, app *tview.Application) (*RequestRepository, error) {
 	appData, err := os.UserConfigDir()
 	if err != nil {
 		return nil, fmt.Errorf("could not find user config directory: %v", err)
@@ -76,7 +76,8 @@ func (r *RequestRepository) DeleteRequestById(id int) error {
 	if err != nil {
 		return fmt.Errorf("could not delete request: %v", err)
 	}
-	r.list.RemoveItem(itemId)
+	deleteableNode := r.list.GetRoot().GetChildren()[itemId]
+	r.list.GetRoot().RemoveChild(deleteableNode)
 	return nil
 }
 
@@ -152,7 +153,8 @@ func (r *RequestRepository) SaveRequest(request models.SavedRequest) (sql.Result
 		URL:    request.URL,
 	}
 
-	r.list.AddItem(savedRequest.URL, savedRequest.Method, 0, nil)
+	savedRequestNode := tview.NewTreeNode(savedRequest.URL)
+	r.list.GetRoot().AddChild(savedRequestNode)
 	return result, err
 }
 

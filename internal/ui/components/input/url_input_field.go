@@ -30,11 +30,15 @@ func NewURLInputField(responseView *tview.TextView, responseMetadata *tview.Text
 	}
 
 	urlField.
-		SetFieldWidth(55).
+		SetFieldWidth(70).
 		SetAcceptanceFunc(tview.InputFieldMaxLength(1024))
+
+	urlField.SetBorderPadding(1,1,0,0)
 
 	urlField.SetFieldTextColor(tcell.ColorBlack)
 	urlField.SetFieldBackgroundColor(tcell.ColorWhite)
+	urlField.SetPlaceholder("Enter URL").
+		SetPlaceholderTextColor(tcell.ColorWhite)
 
 	urlField.SetDoneFunc(urlField.handleKeyPress)
 	return urlField
@@ -47,9 +51,10 @@ func (u *URLInputField) handleKeyPress(key tcell.Key) {
 			u.executeRequest()
 		}
 		u.app.SetFocus(u.responseView)
+		return
 	case tcell.KeyEsc:
 		u.SetBorderColor(tcell.ColorWhite)
-		u.app.SetFocus(u.responseView)
+		return
 	}
 }
 

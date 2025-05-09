@@ -4,7 +4,11 @@ import (
 	"github.com/rivo/tview"
 )
 
-func GetControlsModal() *tview.TextView {
+type ControlsModal struct {
+	View *tview.TextView
+}
+
+func NewControlsModal() *ControlsModal {
 	controlsText := `
     [blue]?[white] Toggle Keyboard Shortcuts
 
@@ -34,5 +38,5 @@ func GetControlsModal() *tview.TextView {
 
 	controlsTextView.SetBorder(true).SetTitle("Controls")
 
-	return controlsTextView
+	return &ControlsModal{View: controlsTextView}
 }

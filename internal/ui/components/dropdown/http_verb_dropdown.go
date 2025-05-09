@@ -10,7 +10,8 @@ func GetHttpVerbDropdown() *tview.DropDown {
 		SetOptions([]string{"GET", "POST", "PUT", "DELETE"}, nil).
 		SetCurrentOption(0)
 
-	httpVerbDropdown.SetBorderPadding(0, 0, 1, 0)
+	httpVerbDropdown.SetBorderPadding(1,1,2,2)
+
 	httpVerbDropdown.SetFieldBackgroundColor(tcell.ColorBlack)
 	httpVerbDropdown.SetFieldTextColor(tcell.ColorGreen)
 	httpVerbDropdown.SetSelectedFunc(func(text string, index int) {

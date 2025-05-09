@@ -2,15 +2,20 @@ package response
 
 import "github.com/rivo/tview"
 
-func GetResponseMetadataTextView() *tview.TextView {
-	responseMetadataTextView := tview.NewTextView().
+type ResponseMetadataTextView struct {
+	View *tview.TextView
+}
+
+func NewResponseMetadataTextView() *ResponseMetadataTextView {
+	view := tview.NewTextView().
 		SetDynamicColors(true).
 		SetRegions(true).
 		SetWrap(false).
 		SetScrollable(true)
 
-	responseMetadataTextView.SetText("[white]Status: [green]- [white]Content-Length: [green]0")
-	responseMetadataTextView.SetTextAlign(tview.AlignRight)
+	view.SetText("[white]Status: [green]- [white]Content-Length: [green]0")
+	view.SetTextAlign(tview.AlignRight)
 
-	return responseMetadataTextView
+	r := &ResponseMetadataTextView{View: view}
+	return r
 }

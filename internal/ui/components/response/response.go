@@ -2,7 +2,6 @@ package response
 
 import (
 	"encoding/json"
-	"treq/internal/ui/components/basecomponent"
 	"treq/internal/ui/state"
 
 	"github.com/gdamore/tcell/v2"
@@ -10,40 +9,40 @@ import (
 )
 
 type ResponseTextView struct {
-	basecomponent.BaseComponent
-	View *tview.TextView
+	TextView       *tview.TextView
+	AppState 			*state.AppState
 }
 
-func NewResponseTextView(app *tview.Application, state *state.AppState) *ResponseTextView {
-	return &ResponseTextView{
-		BaseComponent: *basecomponent.NewBaseComponent(app, state),
-		View:          tview.NewTextView(),
-	}
-}
-
-func (r *ResponseTextView) Build() {
-	r.View.SetDynamicColors(true).
+func NewResponseTextView(appState *state.AppState) *ResponseTextView {
+	view := tview.NewTextView().
+		SetDynamicColors(true).
 		SetRegions(true).
 		SetWrap(true).
-		SetScrollable(true).
-		SetBorder(true).
-		SetTitle("Response")
+		SetScrollable(true)
 
-	r.View.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+	view.SetBorder(true).SetTitle("Response")
+
+	r := &ResponseTextView{TextView: view, AppState: appState}
+	r.setInputCapture()
+
+	return r
+}
+
+func (r *ResponseTextView) setInputCapture() {
+	r.TextView.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 		switch event.Key() {
 		case tcell.KeyPgUp:
-			r.View.ScrollToBeginning()
+			r.TextView.ScrollToBeginning()
 			return nil
 		case tcell.KeyPgDn:
-			r.View.ScrollToEnd()
+			r.TextView.ScrollToEnd()
 			return nil
 		case tcell.KeyEsc:
-			r.State.FocusAppFlexContainer()
+			r.AppState.FocusAppFlexContainer()
 			return nil
 		}
 		return event
 	})
-
 }
 
 func FormatJSON(input string) (string, error) {
