@@ -447,6 +447,11 @@ export function App() {
       return;
     }
 
+    if (command === "t" || command === "patch") {
+      setMethod("PATCH");
+      return;
+    }
+
     if (command === "d" || command === "delete") {
       setMethod("DELETE");
       return;
@@ -614,7 +619,12 @@ export function App() {
         return;
       }
 
-      if (key.ctrl && key.name === "d" && focusField === "requestList") {
+      if (key.name === "t") {
+        setMethod("PATCH");
+        return;
+      }
+
+      if ((key.ctrl || key.meta) && key.name === "d" && focusField === "requestList") {
         openDeleteRequestModal();
         return;
       }

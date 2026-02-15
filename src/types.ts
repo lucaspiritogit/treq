@@ -1,6 +1,6 @@
 export type FocusField = "requestList" | "url" | "method" | "headers" | "requestBody" | "responseBody";
 
-export type HttpMethod = "GET" | "POST" | "PUT" | "DELETE";
+export type HttpMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
 
 export type UiMode = "interactive" | "input";
 

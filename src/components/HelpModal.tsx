@@ -32,6 +32,7 @@ export function HelpModal(props: HelpModalProps) {
           <text><span fg="#93c5fd">:get</span> or <span fg="#93c5fd">:g</span> - Set method to GET</text>
           <text><span fg="#93c5fd">:post</span> or <span fg="#93c5fd">:p</span> - Set method to POST</text>
           <text><span fg="#93c5fd">:put</span> or <span fg="#93c5fd">:u</span> - Set method to PUT</text>
+          <text><span fg="#93c5fd">:patch</span> or <span fg="#93c5fd">:t</span> - Set method to PATCH</text>
           <text><span fg="#93c5fd">:delete</span> or <span fg="#93c5fd">:d</span> - Set method to DELETE</text>
           <text><span fg="#93c5fd">:save</span> - Save current request (overwrites loaded request)</text>
           <text><span fg="#93c5fd">:list</span> - Toggle request list sidebar</text>
