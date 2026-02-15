@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { BodyPanels } from "./components/BodyPanels";
 import { CommandPanel } from "./components/CommandPanel";
 import { CommandSuggestionsPanel } from "./components/CommandSuggestionsPanel";
+import { DeleteRequestModal } from "./components/DeleteRequestModal";
 import { DebugModal } from "./components/DebugModal";
 import { HelpModal } from "./components/HelpModal";
 import { MethodPanel } from "./components/MethodPanel";
@@ -50,6 +51,8 @@ export function App() {
   const [saveRequestName, setSaveRequestName] = useState("");
   const [debugModalOpen, setDebugModalOpen] = useState(false);
   const [debugInfo, setDebugInfo] = useState<DebugInfo | null>(null);
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [requestIdPendingDelete, setRequestIdPendingDelete] = useState<string | null>(null);
   const urlRef = useRef<InputRenderable>(null);
   const headersRef = useRef<TextareaRenderable>(null);
   const requestBodyRef = useRef<TextareaRenderable>(null);
@@ -203,6 +206,38 @@ export function App() {
     setFocusField("url");
     setCommandFeedback(`Loaded: ${request.name}`);
   }, []);
+
+  const openDeleteRequestModal = useCallback(() => {
+    const requestToDelete = savedRequests[requestListCursorIndex];
+    if (!requestToDelete) {
+      return;
+    }
+
+    setRequestIdPendingDelete(requestToDelete.id);
+    setDeleteModalOpen(true);
+  }, [requestListCursorIndex, savedRequests]);
+
+  const confirmDeleteRequest = useCallback(async () => {
+    if (!requestIdPendingDelete) {
+      setDeleteModalOpen(false);
+      return;
+    }
+
+    const nextRequests = savedRequests.filter((savedRequest) => savedRequest.id !== requestIdPendingDelete);
+    try {
+      await Bun.write(REQUESTS_FILE_PATH, `${JSON.stringify(nextRequests, null, 2)}\n`);
+      await loadSavedRequests();
+      if (activeRequestId === requestIdPendingDelete) {
+        setActiveRequestId(null);
+      }
+      setCommandFeedback(`Deleted request (${nextRequests.length})`);
+    } catch {
+      setCommandFeedback("Failed to delete request");
+    } finally {
+      setDeleteModalOpen(false);
+      setRequestIdPendingDelete(null);
+    }
+  }, [activeRequestId, loadSavedRequests, requestIdPendingDelete, savedRequests]);
 
   useEffect(() => {
     if (!activeRequestId) {
@@ -431,6 +466,21 @@ export function App() {
   }, [loadSavedRequests, openSaveModal, renderer, sendRequest]);
 
   useKeyboard((key) => {
+    if (deleteModalOpen) {
+      if (key.name === "escape" || key.name === "n" || key.name === "q") {
+        setDeleteModalOpen(false);
+        setRequestIdPendingDelete(null);
+        return;
+      }
+
+      if (key.name === "enter" || key.name === "return" || key.name === "y") {
+        void confirmDeleteRequest();
+        return;
+      }
+
+      return;
+    }
+
     if (debugModalOpen) {
       if (key.name === "escape" || key.name === "q" || key.name === "enter" || key.name === "return") {
         setDebugModalOpen(false);
@@ -564,6 +614,11 @@ export function App() {
         return;
       }
 
+      if (key.ctrl && key.name === "d" && focusField === "requestList") {
+        openDeleteRequestModal();
+        return;
+      }
+
       if (key.name === "d") {
         setMethod("DELETE");
         return;
@@ -622,6 +677,7 @@ export function App() {
         setFocusField("method");
         return;
       }
+
     }
 
     if (uiMode === "input" && isTextEntryField(focusField)) {
@@ -729,6 +785,17 @@ export function App() {
       </box>
       <HelpModal isOpen={helpModalOpen} />
       <DebugModal isOpen={debugModalOpen} debugInfo={debugInfo} />
+      <DeleteRequestModal
+        isOpen={deleteModalOpen}
+        requestToDelete={savedRequests.find((savedRequest) => savedRequest.id === requestIdPendingDelete) ?? null}
+        onConfirm={() => {
+          void confirmDeleteRequest();
+        }}
+        onCancel={() => {
+          setDeleteModalOpen(false);
+          setRequestIdPendingDelete(null);
+        }}
+      />
       <SaveRequestModal
         isOpen={saveModalOpen}
         requestName={saveRequestName}

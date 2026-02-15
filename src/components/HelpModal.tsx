@@ -40,7 +40,7 @@ export function HelpModal(props: HelpModalProps) {
           <text><span fg="#93c5fd">:debug</span> - Open full-screen request/response debug modal</text>
           <text> </text>
           <text><span fg="#94a3b8">Interactive:</span> <span fg="#93c5fd">l</span> or <span fg="#93c5fd">Left</span> focuses request list</text>
-          <text><span fg="#94a3b8">Request list:</span> <span fg="#93c5fd">Up/Down</span> navigate, <span fg="#93c5fd">Enter</span> loads request</text>
+          <text><span fg="#94a3b8">Request list:</span> <span fg="#93c5fd">Up/Down</span> navigate, <span fg="#93c5fd">Enter</span> loads request, <span fg="#93c5fd">Ctrl/Cmd+d</span> deletes request</text>
           <text> </text>
           <text><span fg="#94a3b8">Close help: Esc, Enter, or q</span></text>
         </scrollbox>

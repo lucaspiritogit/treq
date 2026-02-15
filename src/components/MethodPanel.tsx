@@ -9,7 +9,7 @@ type MethodPanelProps = {
 
 export function MethodPanel(props: MethodPanelProps) {
   return (
-    <box border padding={1} title="Method" width={10}>
+    <box border padding={1} title="Method" width={14}>
       <text>
         <span fg={props.focusField === "method" && props.uiMode === "interactive" ? "#f8fafc" : "#94a3b8"}>
           {props.focusField === "method" && props.uiMode === "interactive" ? "> " : "  "}
