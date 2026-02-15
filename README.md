@@ -10,6 +10,12 @@ bun install
 bun run dev
 ```
 
+## Install
+
+```bash
+curl -fsSSl https://raw.githubusercontent.com/lpirito/treq/main/install.sh | sh
+```
+
 ## Features
 
 - Vim-style command mode (`:`) with command suggestions (for example `:send`, `:save`, `:list`, `:help`)
