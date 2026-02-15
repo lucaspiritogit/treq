@@ -1,0 +1,27 @@
+import type { FocusField, HttpMethod } from "./types";
+
+export const focusOrder: FocusField[] = ["requestList", "method", "url", "headers", "requestBody", "responseBody"];
+
+export const methodColors: Record<HttpMethod, string> = {
+  GET: "#22c55e",
+  POST: "#0ea5e9",
+  PUT: "#f59e0b",
+  DELETE: "#ef4444",
+};
+
+export const commandSuggestions = [
+  { name: "send", description: "Send current HTTP request" },
+  { name: "save", description: "Save current request" },
+  { name: "list", description: "Toggle request list sidebar" },
+  { name: "reload", description: "Reload saved requests file" },
+  { name: "url", description: "Focus URL input" },
+  { name: "headers", description: "Focus headers input" },
+  { name: "request", description: "Focus request body" },
+  { name: "response", description: "Focus response body" },
+  { name: "get", description: "Set method to GET" },
+  { name: "post", description: "Set method to POST" },
+  { name: "put", description: "Set method to PUT" },
+  { name: "delete", description: "Set method to DELETE" },
+  { name: "help", description: "Open help modal" },
+  { name: "quit", description: "Exit application" },
+] as const;
