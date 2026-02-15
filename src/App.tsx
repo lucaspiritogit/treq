@@ -624,7 +624,10 @@ export function App() {
         return;
       }
 
-      if ((key.name === "l" || key.name === "left") && requestListOpen) {
+      if (key.name === "l" || key.name === "left") {
+        if (!requestListOpen) {
+          setRequestListOpen(true);
+        }
         setFocusField("requestList");
         return;
       }
