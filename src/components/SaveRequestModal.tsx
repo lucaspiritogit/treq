@@ -28,6 +28,7 @@ export function SaveRequestModal(props: SaveRequestModalProps) {
         </text>
         <box border marginTop={1} padding={1}>
           <input
+            value={props.requestName}
             onChange={props.setRequestName}
             onInput={props.setRequestName}
             onSubmit={props.onConfirm}

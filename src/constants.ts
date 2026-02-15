@@ -23,5 +23,6 @@ export const commandSuggestions = [
   { name: "put", description: "Set method to PUT" },
   { name: "delete", description: "Set method to DELETE" },
   { name: "help", description: "Open help modal" },
+  { name: "debug", description: "Open request/response debug modal" },
   { name: "quit", description: "Exit application" },
 ] as const;

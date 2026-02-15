@@ -1,4 +1,4 @@
-import type { FocusField } from "./types";
+import type { DebugPair, FocusField } from "./types";
 
 export type HighlightToken = {
   text: string;
@@ -53,6 +53,55 @@ export function formatResponseBody(text: string): string {
   } catch {
     return text;
   }
+}
+
+export function isSensitiveHeaderName(name: string): boolean {
+  const normalized = name.trim().toLowerCase();
+  return normalized === "authorization" || normalized === "x-api-key" || normalized === "cookie" || normalized === "set-cookie";
+}
+
+export function maskSensitiveHeaderValue(name: string, value: string): string {
+  if (!isSensitiveHeaderName(name)) {
+    return value;
+  }
+
+  const trimmedValue = value.trim();
+  if (!trimmedValue) {
+    return "********";
+  }
+
+  if (name.trim().toLowerCase() === "authorization") {
+    const separatorIndex = trimmedValue.indexOf(" ");
+    if (separatorIndex > 0) {
+      const scheme = trimmedValue.slice(0, separatorIndex);
+      return `${scheme} ********`;
+    }
+  }
+
+  return "********";
+}
+
+export function maskSensitiveHeadersText(rawHeaders: string): string {
+  return rawHeaders
+    .split("\n")
+    .map((line) => {
+      const separatorIndex = line.indexOf(":");
+      if (separatorIndex === -1) {
+        return line;
+      }
+      const key = line.slice(0, separatorIndex).trim();
+      const value = line.slice(separatorIndex + 1).trim();
+      const maskedValue = maskSensitiveHeaderValue(key, value);
+      return `${key}: ${maskedValue}`;
+    })
+    .join("\n");
+}
+
+export function maskSensitiveHeaderPairs(headerPairs: DebugPair[]): DebugPair[] {
+  return headerPairs.map((headerPair) => ({
+    key: headerPair.key,
+    value: maskSensitiveHeaderValue(headerPair.key, headerPair.value),
+  }));
 }
 
 export function highlightJsonLine(line: string): HighlightToken[] {

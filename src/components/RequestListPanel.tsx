@@ -2,6 +2,7 @@ import type { SavedRequest } from "../types";
 
 type RequestListPanelProps = {
   requests: SavedRequest[];
+  activeRequestId: string | null;
   focused: boolean;
   cursorIndex: number;
 };
@@ -22,6 +23,7 @@ export function RequestListPanel(props: RequestListPanelProps) {
                   {props.focused && index === props.cursorIndex ? "> " : "  "}
                 </span>
                 <span fg="#64748b">{index + 1}. </span>
+                <span fg={request.id === props.activeRequestId ? "#22c55e" : "#64748b"}>{request.id === props.activeRequestId ? "* " : "  "}</span>
                 <span fg="#e2e8f0">{request.name}</span>
               </text>
               <text>

@@ -15,7 +15,7 @@ export function CommandPanel(props: CommandPanelProps) {
       ) : (
         <text>
           <span fg="#94a3b8">{props.commandFeedback || "Press :"}</span>
-          <span fg="#64748b">{props.commandFeedback ? "" : " to open command mode (e.g. :send, :save, :list, :help)"}</span>
+          <span fg="#64748b">{props.commandFeedback ? "" : " to open command mode (e.g. :send, :save, :debug, :help)"}</span>
         </text>
       )}
     </box>

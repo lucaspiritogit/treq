@@ -22,7 +22,7 @@ export function BodyPanels(props: BodyPanelsProps) {
 
   return (
     <box flexDirection={props.stacked ? "column" : "row"} flexGrow={1} minHeight={0} gap={1}>
-      <box border padding={1} title="Request Body" flexGrow={1} flexShrink={1} minWidth={0} minHeight={0}>
+      <box border padding={1} title="Request Body" flexGrow={1} flexShrink={1} flexBasis={0} minWidth={0} minHeight={0}>
         {props.uiMode === "input" && props.focusField === "requestBody" ? (
           <textarea
             ref={props.requestBodyRef}
@@ -39,7 +39,10 @@ export function BodyPanels(props: BodyPanelsProps) {
             ]}
             focused
             wrapMode="word"
+            width="100%"
             flexGrow={1}
+            flexShrink={1}
+            minWidth={0}
             minHeight={0}
             height="100%"
           />
@@ -71,7 +74,7 @@ export function BodyPanels(props: BodyPanelsProps) {
           </scrollbox>
         )}
       </box>
-      <box border padding={1} title={`Response Body (${props.responseStatus})`} flexGrow={1} flexShrink={1} minWidth={0} minHeight={0}>
+      <box border padding={1} title={`Response Body (${props.responseStatus})`} flexGrow={1} flexShrink={1} flexBasis={0} minWidth={0} minHeight={0}>
         <scrollbox focused={props.focusField === "responseBody"} flexGrow={1} minHeight={0} height="100%">
           {responseLines.map((line, lineIndex) => (
             <text key={`response-${lineIndex}`}>

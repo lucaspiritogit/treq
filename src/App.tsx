@@ -4,14 +4,23 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { BodyPanels } from "./components/BodyPanels";
 import { CommandPanel } from "./components/CommandPanel";
 import { CommandSuggestionsPanel } from "./components/CommandSuggestionsPanel";
+import { DebugModal } from "./components/DebugModal";
 import { HelpModal } from "./components/HelpModal";
 import { MethodPanel } from "./components/MethodPanel";
 import { ModePanel } from "./components/ModePanel";
 import { RequestListPanel } from "./components/RequestListPanel";
 import { SaveRequestModal } from "./components/SaveRequestModal";
 import { focusOrder, methodColors } from "./constants";
-import type { FocusField, HttpMethod, SavedRequest, UiMode } from "./types";
-import { formatResponseBody, getCommandChar, isCommandStarterKey, isTextEntryField, parseHeaders } from "./utils";
+import type { DebugInfo, FocusField, HttpMethod, SavedRequest, UiMode } from "./types";
+import {
+  formatResponseBody,
+  getCommandChar,
+  isCommandStarterKey,
+  isTextEntryField,
+  maskSensitiveHeaderPairs,
+  maskSensitiveHeadersText,
+  parseHeaders,
+} from "./utils";
 
 const REQUESTS_FILE_PATH = `${process.cwd()}/treq-requests.json`;
 
@@ -32,12 +41,15 @@ export function App() {
   const [commandFeedback, setCommandFeedback] = useState("");
   const [helpModalOpen, setHelpModalOpen] = useState(false);
   const [savedRequests, setSavedRequests] = useState<SavedRequest[]>([]);
+  const [activeRequestId, setActiveRequestId] = useState<string | null>(null);
   const [requestListOpen, setRequestListOpen] = useState(true);
   const [requestListCursorIndex, setRequestListCursorIndex] = useState(0);
   const [headersEditorVersion, setHeadersEditorVersion] = useState(0);
   const [requestBodyEditorVersion, setRequestBodyEditorVersion] = useState(0);
   const [saveModalOpen, setSaveModalOpen] = useState(false);
   const [saveRequestName, setSaveRequestName] = useState("");
+  const [debugModalOpen, setDebugModalOpen] = useState(false);
+  const [debugInfo, setDebugInfo] = useState<DebugInfo | null>(null);
   const urlRef = useRef<InputRenderable>(null);
   const headersRef = useRef<TextareaRenderable>(null);
   const requestBodyRef = useRef<TextareaRenderable>(null);
@@ -99,27 +111,65 @@ export function App() {
       return;
     }
 
-    const nextRequest: SavedRequest = {
-      id: `${Date.now()}`,
-      name: trimmedName,
-      method,
-      url: trimmedUrl,
-      headers: headersRef.current?.plainText ?? headersText,
-      body: requestBodyRef.current?.plainText ?? requestBodyText,
-      createdAt: new Date().toISOString(),
-    };
+    const isEditingHeaders = uiMode === "input" && focusField === "headers";
+    const isEditingRequestBody = uiMode === "input" && focusField === "requestBody";
+    const headersValue = isEditingHeaders ? (headersRef.current?.plainText ?? headersText) : headersText;
+    const bodyValue = isEditingRequestBody ? (requestBodyRef.current?.plainText ?? requestBodyText) : requestBodyText;
+    const existingRequestIndex = activeRequestId
+      ? savedRequests.findIndex((savedRequest) => savedRequest.id === activeRequestId)
+      : -1;
+    let nextRequests: SavedRequest[] = [];
+    let savedRequestId = activeRequestId;
 
-    const nextRequests = [...savedRequests, nextRequest];
+    if (existingRequestIndex >= 0) {
+      const existingRequest = savedRequests[existingRequestIndex];
+      if (!existingRequest) {
+        return;
+      }
+
+      const updatedRequest: SavedRequest = {
+        id: existingRequest.id,
+        name: trimmedName,
+        method,
+        url: trimmedUrl,
+        headers: maskSensitiveHeadersText(headersValue),
+        body: bodyValue,
+        createdAt: existingRequest.createdAt,
+      };
+      nextRequests = savedRequests.map((savedRequest, index) => {
+        if (index === existingRequestIndex) {
+          return updatedRequest;
+        }
+        return savedRequest;
+      });
+      savedRequestId = existingRequest.id;
+    } else {
+      const nextRequest: SavedRequest = {
+        id: `${Date.now()}`,
+        name: trimmedName,
+        method,
+        url: trimmedUrl,
+        headers: maskSensitiveHeadersText(headersValue),
+        body: bodyValue,
+        createdAt: new Date().toISOString(),
+      };
+      nextRequests = [...savedRequests, nextRequest];
+      savedRequestId = nextRequest.id;
+    }
+
     try {
       await Bun.write(REQUESTS_FILE_PATH, `${JSON.stringify(nextRequests, null, 2)}\n`);
       setSavedRequests(nextRequests);
-      setCommandFeedback(`Saved request (${nextRequests.length})`);
+      if (savedRequestId) {
+        setActiveRequestId(savedRequestId);
+      }
+      setCommandFeedback(existingRequestIndex >= 0 ? `Updated request (${trimmedName})` : `Saved request (${trimmedName})`);
       setSaveModalOpen(false);
       setSaveRequestName("");
     } catch {
       setCommandFeedback("Failed to write treq-requests.json");
     }
-  }, [headersText, method, requestBodyText, savedRequests, url]);
+  }, [activeRequestId, focusField, headersText, method, requestBodyText, savedRequests, uiMode, url]);
 
   const openSaveModal = useCallback(() => {
     const trimmedUrl = (urlRef.current?.value ?? url).trim();
@@ -128,21 +178,42 @@ export function App() {
       return;
     }
 
+    const activeRequest = activeRequestId
+      ? savedRequests.find((savedRequest) => savedRequest.id === activeRequestId)
+      : null;
+
+    if (activeRequest) {
+      void saveCurrentRequest(activeRequest.name);
+      return;
+    }
+
     setSaveRequestName(`${method} ${trimmedUrl}`);
     setSaveModalOpen(true);
-  }, [method, url]);
+  }, [activeRequestId, method, saveCurrentRequest, savedRequests, url]);
 
   const loadRequestIntoForm = useCallback((request: SavedRequest) => {
     setMethod(request.method);
     setUrl(request.url);
     setHeadersText(request.headers);
     setRequestBodyText(request.body);
+    setActiveRequestId(request.id);
     setHeadersEditorVersion((value) => value + 1);
     setRequestBodyEditorVersion((value) => value + 1);
     setUiMode("input");
     setFocusField("url");
     setCommandFeedback(`Loaded: ${request.name}`);
   }, []);
+
+  useEffect(() => {
+    if (!activeRequestId) {
+      return;
+    }
+
+    const hasActiveRequest = savedRequests.some((savedRequest) => savedRequest.id === activeRequestId);
+    if (!hasActiveRequest) {
+      setActiveRequestId(null);
+    }
+  }, [activeRequestId, savedRequests]);
 
   useEffect(() => {
     if (!requestListOpen && focusField === "requestList") {
@@ -167,8 +238,10 @@ export function App() {
     setCommandFeedback("");
 
     const trimmedUrl = (urlRef.current?.value ?? url).trim();
-    const headersValue = headersRef.current?.plainText ?? headersText;
-    const requestBodyValue = requestBodyRef.current?.plainText ?? requestBodyText;
+    const isEditingHeaders = uiMode === "input" && focusField === "headers";
+    const isEditingRequestBody = uiMode === "input" && focusField === "requestBody";
+    const headersValue = isEditingHeaders ? (headersRef.current?.plainText ?? headersText) : headersText;
+    const requestBodyValue = isEditingRequestBody ? (requestBodyRef.current?.plainText ?? requestBodyText) : requestBodyText;
 
     if (!trimmedUrl) {
       setResponseStatus("URL is required");
@@ -177,30 +250,95 @@ export function App() {
     }
 
     const normalizedMethod = method.trim().toUpperCase() || "GET";
+    const parsedRequestHeaders = parseHeaders(headersValue);
     const requestInit: RequestInit = {
       method: normalizedMethod,
-      headers: parseHeaders(headersValue),
+      headers: parsedRequestHeaders,
     };
 
-    if (normalizedMethod !== "GET" && normalizedMethod !== "HEAD" && requestBodyValue.trim()) {
+    const bodyIncluded = normalizedMethod !== "GET" && normalizedMethod !== "HEAD" && !!requestBodyValue.trim();
+    if (bodyIncluded) {
       requestInit.body = requestBodyValue;
     }
 
+    let parsedUrl: URL | null = null;
+    try {
+      parsedUrl = new URL(trimmedUrl);
+    } catch {
+      parsedUrl = null;
+    }
+
+    const requestParams = parsedUrl
+      ? Array.from(parsedUrl.searchParams.entries()).map((entry) => ({ key: entry[0], value: entry[1] }))
+      : [];
+    const requestHeaderPairs = Object.entries(parsedRequestHeaders).map((entry) => ({ key: entry[0], value: entry[1] }));
+    const maskedRequestHeaderPairs = maskSensitiveHeaderPairs(requestHeaderPairs);
+
     setIsLoading(true);
     setResponseStatus("Sending request...");
+    const startedAtMs = Date.now();
+    const startedAtIso = new Date(startedAtMs).toISOString();
     try {
       const response = await fetch(trimmedUrl, requestInit);
       const responseText = await response.text();
+      const finishedAtMs = Date.now();
+      const responseHeaders = Array.from(response.headers.entries()).map((entry) => ({ key: entry[0], value: entry[1] }));
       setResponseStatus(`${response.status} ${response.statusText}`);
       setResponseBody(formatResponseBody(responseText));
+      setDebugInfo({
+        startedAt: startedAtIso,
+        finishedAt: new Date(finishedAtMs).toISOString(),
+        durationMs: finishedAtMs - startedAtMs,
+        request: {
+          method: normalizedMethod,
+          url: trimmedUrl,
+          origin: parsedUrl?.origin ?? "",
+          pathname: parsedUrl?.pathname ?? "",
+          search: parsedUrl?.search ?? "",
+          params: requestParams,
+          headers: maskedRequestHeaderPairs,
+          headerCount: requestHeaderPairs.length,
+          bodyIncluded,
+        },
+        response: {
+          status: response.status,
+          statusText: response.statusText,
+          ok: response.ok,
+          url: response.url,
+          redirected: response.redirected,
+          type: response.type,
+          headers: responseHeaders,
+          headerCount: responseHeaders.length,
+        },
+        errorMessage: null,
+      });
     } catch (error) {
+      const finishedAtMs = Date.now();
       const message = error instanceof Error ? error.message : "Unknown request error";
       setResponseStatus("Request failed");
       setResponseBody(message);
+      setDebugInfo({
+        startedAt: startedAtIso,
+        finishedAt: new Date(finishedAtMs).toISOString(),
+        durationMs: finishedAtMs - startedAtMs,
+        request: {
+          method: normalizedMethod,
+          url: trimmedUrl,
+          origin: parsedUrl?.origin ?? "",
+          pathname: parsedUrl?.pathname ?? "",
+          search: parsedUrl?.search ?? "",
+          params: requestParams,
+          headers: maskedRequestHeaderPairs,
+          headerCount: requestHeaderPairs.length,
+          bodyIncluded,
+        },
+        response: null,
+        errorMessage: message,
+      });
     } finally {
       setIsLoading(false);
     }
-  }, [headersText, method, requestBodyText, url]);
+  }, [focusField, headersText, method, requestBodyText, uiMode, url]);
 
   const runCommand = useCallback((rawCommand: string) => {
     setCommandFeedback("");
@@ -284,10 +422,22 @@ export function App() {
       return;
     }
 
+    if (command === "debug" || command === "dbg") {
+      setDebugModalOpen(true);
+      return;
+    }
+
     setCommandFeedback("");
   }, [loadSavedRequests, openSaveModal, renderer, sendRequest]);
 
   useKeyboard((key) => {
+    if (debugModalOpen) {
+      if (key.name === "escape" || key.name === "q" || key.name === "enter" || key.name === "return") {
+        setDebugModalOpen(false);
+      }
+      return;
+    }
+
     if (helpModalOpen) {
       if (key.name === "escape" || key.name === "q" || key.name === "enter" || key.name === "return") {
         setHelpModalOpen(false);
@@ -318,6 +468,12 @@ export function App() {
     if (key.ctrl && key.name === "c") {
       renderer.destroy();
       return;
+    }
+
+    if (uiMode === "input" && isTextEntryField(focusField) && commandMode) {
+      setCommandMode(false);
+      setCommandLine("");
+      setCommandFeedback("");
     }
 
     if (commandMode) {
@@ -384,6 +540,12 @@ export function App() {
       if (key.name === "i") {
         setUiMode("input");
         setFocusField("url");
+        return;
+      }
+
+      if (key.name === "h") {
+        setUiMode("input");
+        setFocusField("headers");
         return;
       }
 
@@ -472,6 +634,10 @@ export function App() {
   });
 
   const stackBodyPanels = terminalDimensions.width < (requestListOpen ? 90 : 30);
+  const maskedHeadersText = maskSensitiveHeadersText(headersRef.current?.plainText ?? headersText);
+  const maskedHeaderLines = maskedHeadersText.split("\n");
+  const headersPanelContentHeight = 6;
+  const headersPanelHeight = headersPanelContentHeight + 2;
 
   return (
     <box flexDirection="column" width="100%" height="100%" padding={1} gap={1}>
@@ -479,6 +645,7 @@ export function App() {
         {requestListOpen ? (
           <RequestListPanel
             requests={savedRequests}
+            activeRequestId={activeRequestId}
             focused={uiMode === "interactive" && focusField === "requestList"}
             cursorIndex={requestListCursorIndex}
           />
@@ -506,25 +673,39 @@ export function App() {
             </box>
           </box>
 
-          <box border padding={1} title="Headers (Key: Value)">
-            <textarea
-              key={`headers-${headersEditorVersion}`}
-              ref={headersRef}
-              initialValue={headersText}
-              onContentChange={() => {
-                setHeadersText(headersRef.current?.plainText ?? "");
-              }}
-              onSubmit={() => {
-                void sendRequest();
-              }}
-              keyBindings={[
-                { name: "return", ctrl: true, action: "submit" },
-                { name: "enter", ctrl: true, action: "submit" },
-              ]}
-              focused={uiMode === "input" && focusField === "headers"}
-              wrapMode="word"
-              height={4}
-            />
+          <box border padding={1} title="Headers (Key: Value)" height={headersPanelHeight} minHeight={headersPanelHeight} flexShrink={0}>
+            {uiMode === "input" && focusField === "headers" ? (
+              <textarea
+                key={`headers-${headersEditorVersion}`}
+                ref={headersRef}
+                initialValue={headersText}
+                onContentChange={() => {
+                  setHeadersText(headersRef.current?.plainText ?? "");
+                }}
+                onSubmit={() => {
+                  void sendRequest();
+                }}
+                keyBindings={[
+                  { name: "return", ctrl: true, action: "submit" },
+                  { name: "enter", ctrl: true, action: "submit" },
+                ]}
+                focused
+                wrapMode="word"
+                width="100%"
+                minWidth={0}
+                flexGrow={1}
+                minHeight={0}
+                height={headersPanelContentHeight}
+              />
+            ) : (
+              <scrollbox focused={focusField === "headers"} flexGrow={1} minHeight={0} height={headersPanelContentHeight}>
+                {maskedHeaderLines.map((line, lineIndex) => (
+                  <text key={`header-preview-${lineIndex}`}>
+                    <span fg="#e2e8f0">{line || " "}</span>
+                  </text>
+                ))}
+              </scrollbox>
+            )}
           </box>
 
           <BodyPanels
@@ -547,6 +728,7 @@ export function App() {
         </box>
       </box>
       <HelpModal isOpen={helpModalOpen} />
+      <DebugModal isOpen={debugModalOpen} debugInfo={debugInfo} />
       <SaveRequestModal
         isOpen={saveModalOpen}
         requestName={saveRequestName}

@@ -33,10 +33,11 @@ export function HelpModal(props: HelpModalProps) {
           <text><span fg="#93c5fd">:post</span> or <span fg="#93c5fd">:p</span> - Set method to POST</text>
           <text><span fg="#93c5fd">:put</span> or <span fg="#93c5fd">:u</span> - Set method to PUT</text>
           <text><span fg="#93c5fd">:delete</span> or <span fg="#93c5fd">:d</span> - Set method to DELETE</text>
-          <text><span fg="#93c5fd">:save</span> - Open name prompt and save current request</text>
+          <text><span fg="#93c5fd">:save</span> - Save current request (overwrites loaded request)</text>
           <text><span fg="#93c5fd">:list</span> - Toggle request list sidebar</text>
           <text><span fg="#93c5fd">:reload</span> - Reload requests from requests.json</text>
           <text><span fg="#93c5fd">:help</span> - Open this help modal</text>
+          <text><span fg="#93c5fd">:debug</span> - Open full-screen request/response debug modal</text>
           <text> </text>
           <text><span fg="#94a3b8">Interactive:</span> <span fg="#93c5fd">l</span> or <span fg="#93c5fd">Left</span> focuses request list</text>
           <text><span fg="#94a3b8">Request list:</span> <span fg="#93c5fd">Up/Down</span> navigate, <span fg="#93c5fd">Enter</span> loads request</text>
