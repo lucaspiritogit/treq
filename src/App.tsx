@@ -1,5 +1,7 @@
 import { type InputRenderable, type TextareaRenderable } from "@opentui/core";
 import { useKeyboard, useRenderer, useTerminalDimensions } from "@opentui/react";
+import { mkdir, lstat, readFile, writeFile } from "node:fs/promises";
+import { dirname, join } from "node:path";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { BodyPanels } from "./components/BodyPanels";
 import { CommandPanel } from "./components/CommandPanel";
@@ -23,7 +25,40 @@ import {
   parseHeaders,
 } from "./utils";
 
-const REQUESTS_FILE_PATH = `${process.cwd()}/treq-requests.json`;
+function getRequestsFilePath(): string {
+  if (process.platform === "win32") {
+    const appData = process.env.APPDATA;
+    if (appData) {
+      return join(appData, "treq", "treq-requests.json");
+    }
+    const userProfile = process.env.USERPROFILE ?? process.cwd();
+    return join(userProfile, "AppData", "Roaming", "treq", "treq-requests.json");
+  }
+
+  const xdgConfigHome = process.env.XDG_CONFIG_HOME;
+  if (xdgConfigHome) {
+    return join(xdgConfigHome, "treq", "treq-requests.json");
+  }
+
+  const home = process.env.HOME ?? process.cwd();
+  return join(home, ".config", "treq", "treq-requests.json");
+}
+
+const REQUESTS_FILE_PATH = getRequestsFilePath();
+
+async function assertNotSymlink(path: string): Promise<void> {
+  try {
+    const stats = await lstat(path);
+    if (stats.isSymbolicLink()) {
+      throw new Error("symlink");
+    }
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") {
+      return;
+    }
+    throw error;
+  }
+}
 
 export function App() {
   const renderer = useRenderer();
@@ -59,13 +94,8 @@ export function App() {
 
   const loadSavedRequests = useCallback(async () => {
     try {
-      const file = Bun.file(REQUESTS_FILE_PATH);
-      if (!(await file.exists())) {
-        setSavedRequests([]);
-        return;
-      }
-
-      const content = await file.text();
+      await assertNotSymlink(REQUESTS_FILE_PATH);
+      const content = await readFile(REQUESTS_FILE_PATH, "utf8");
       if (!content.trim()) {
         setSavedRequests([]);
         return;
@@ -92,7 +122,11 @@ export function App() {
       });
 
       setSavedRequests(normalized);
-    } catch {
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === "ENOENT") {
+        setSavedRequests([]);
+        return;
+      }
       setCommandFeedback("Failed to load treq-requests.json");
     }
   }, []);
@@ -161,7 +195,9 @@ export function App() {
     }
 
     try {
-      await Bun.write(REQUESTS_FILE_PATH, `${JSON.stringify(nextRequests, null, 2)}\n`);
+      await mkdir(dirname(REQUESTS_FILE_PATH), { recursive: true });
+      await assertNotSymlink(REQUESTS_FILE_PATH);
+      await writeFile(REQUESTS_FILE_PATH, `${JSON.stringify(nextRequests, null, 2)}\n`, "utf8");
       setSavedRequests(nextRequests);
       if (savedRequestId) {
         setActiveRequestId(savedRequestId);
@@ -225,7 +261,9 @@ export function App() {
 
     const nextRequests = savedRequests.filter((savedRequest) => savedRequest.id !== requestIdPendingDelete);
     try {
-      await Bun.write(REQUESTS_FILE_PATH, `${JSON.stringify(nextRequests, null, 2)}\n`);
+      await mkdir(dirname(REQUESTS_FILE_PATH), { recursive: true });
+      await assertNotSymlink(REQUESTS_FILE_PATH);
+      await writeFile(REQUESTS_FILE_PATH, `${JSON.stringify(nextRequests, null, 2)}\n`, "utf8");
       await loadSavedRequests();
       if (activeRequestId === requestIdPendingDelete) {
         setActiveRequestId(null);

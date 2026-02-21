@@ -1,72 +1,112 @@
 #!/usr/bin/env sh
 set -eu
 
-REPO_URL="https://github.com/lucaspiritogit/treq.git"
+REPO="lucaspiritogit/treq"
 BIN_NAME="treq"
-INSTALL_DIR="/usr/local/lib/treq"
-BIN_DIR="/usr/local/bin"
+INSTALL_DIR="/usr/local/bin"
 
 fail() {
   printf "%s\n" "$1" >&2
   exit 1
 }
 
-if ! command -v git >/dev/null 2>&1; then
-  fail "git is required to install treq"
+if command -v curl >/dev/null 2>&1; then
+  FETCH_TOOL="curl"
+elif command -v wget >/dev/null 2>&1; then
+  FETCH_TOOL="wget"
+else
+  fail "curl or wget is required"
 fi
 
-if command -v bun >/dev/null 2>&1; then
-  BUN_CMD="$(command -v bun)"
-elif command -v curl >/dev/null 2>&1; then
-  curl -fsSL https://bun.sh/install | sh
-  if command -v bun >/dev/null 2>&1; then
-    BUN_CMD="$(command -v bun)"
-  elif [ -x "$HOME/.bun/bin/bun" ]; then
-    BUN_CMD="$HOME/.bun/bin/bun"
-  else
-    fail "Bun was installed but is not available. Add \$HOME/.bun/bin to PATH and retry."
+if ! command -v tar >/dev/null 2>&1; then
+  fail "tar is required"
+fi
+
+sha256_file() {
+  if command -v sha256sum >/dev/null 2>&1; then
+    sha256sum "$1" | awk '{print $1}'
+    return
   fi
+  if command -v shasum >/dev/null 2>&1; then
+    shasum -a 256 "$1" | awk '{print $1}'
+    return
+  fi
+  fail "sha256sum or shasum is required"
+}
+
+VERSION="${TREQ_VERSION:-}"
+if [ -z "$VERSION" ]; then
+  if [ "$FETCH_TOOL" = "curl" ]; then
+    VERSION="$(curl -fsSL "https://api.github.com/repos/${REPO}/releases/latest" | awk -F '"' '/"tag_name":/ { print $4 }')"
+  else
+    VERSION="$(wget -qO- "https://api.github.com/repos/${REPO}/releases/latest" | awk -F '"' '/"tag_name":/ { print $4 }')"
+  fi
+fi
+[ -n "$VERSION" ] || fail "Could not resolve treq version"
+
+UNAME_S="$(uname -s)"
+UNAME_M="$(uname -m)"
+
+case "$UNAME_S" in
+  Linux) OS="Linux" ;;
+  Darwin) OS="Darwin" ;;
+  *) fail "Unsupported operating system: $UNAME_S" ;;
+esac
+
+case "$UNAME_M" in
+  x86_64|amd64) ARCH="amd64" ;;
+  arm64|aarch64) ARCH="arm64" ;;
+  *) fail "Unsupported CPU architecture: $UNAME_M" ;;
+esac
+
+ASSET="${BIN_NAME}_${OS}_${ARCH}.tar.gz"
+CHECKSUMS_ASSET="SHA256SUMS"
+BASE_URL="https://github.com/${REPO}/releases/download/${VERSION}"
+ASSET_URL="${BASE_URL}/${ASSET}"
+CHECKSUMS_URL="${BASE_URL}/${CHECKSUMS_ASSET}"
+
+TMP_DIR="$(mktemp -d 2>/dev/null || mktemp -d -t treq)"
+trap 'rm -rf "$TMP_DIR"' EXIT INT TERM
+
+ARCHIVE_PATH="${TMP_DIR}/${ASSET}"
+CHECKSUMS_PATH="${TMP_DIR}/${CHECKSUMS_ASSET}"
+
+if [ "$FETCH_TOOL" = "curl" ]; then
+  curl -fsSL "$ASSET_URL" -o "$ARCHIVE_PATH"
+  curl -fsSL "$CHECKSUMS_URL" -o "$CHECKSUMS_PATH"
 else
-  fail "bun is required and curl is needed to install it automatically"
+  wget -qO "$ARCHIVE_PATH" "$ASSET_URL"
+  wget -qO "$CHECKSUMS_PATH" "$CHECKSUMS_URL"
 fi
 
-if [ -d "$INSTALL_DIR/.git" ]; then
-  git -C "$INSTALL_DIR" pull --ff-only
-else
-  INSTALL_PARENT="$(dirname "$INSTALL_DIR")"
-  if [ -w "$INSTALL_PARENT" ]; then
-    mkdir -p "$INSTALL_PARENT"
-    git clone --depth 1 "$REPO_URL" "$INSTALL_DIR"
+EXPECTED_HASH="$(awk -v asset="$ASSET" '$2 == asset { print $1 }' "$CHECKSUMS_PATH")"
+[ -n "$EXPECTED_HASH" ] || fail "Could not find checksum for ${ASSET}"
+
+ACTUAL_HASH="$(sha256_file "$ARCHIVE_PATH")"
+[ "$ACTUAL_HASH" = "$EXPECTED_HASH" ] || fail "Checksum verification failed for ${ASSET}"
+
+tar -xzf "$ARCHIVE_PATH" -C "$TMP_DIR"
+[ -f "${TMP_DIR}/${BIN_NAME}" ] || fail "Archive did not contain ${BIN_NAME}"
+
+if [ ! -d "$INSTALL_DIR" ]; then
+  if [ -w "$(dirname "$INSTALL_DIR")" ]; then
+    mkdir -p "$INSTALL_DIR"
   elif command -v sudo >/dev/null 2>&1; then
-    sudo mkdir -p "$INSTALL_PARENT"
-    sudo git clone --depth 1 "$REPO_URL" "$INSTALL_DIR"
-    sudo chown -R "$USER" "$INSTALL_DIR"
+    sudo mkdir -p "$INSTALL_DIR"
   else
-    fail "Cannot write to $INSTALL_PARENT. Run with sufficient permissions."
+    fail "Cannot create ${INSTALL_DIR}. Run with sufficient permissions."
   fi
 fi
 
-"$BUN_CMD" install --cwd "$INSTALL_DIR"
-
-LAUNCHER_CONTENT="#!/usr/bin/env sh
-set -eu
-exec \"$BUN_CMD\" run \"$INSTALL_DIR/src/index.tsx\" \"\$@\""
-
-TARGET_PATH="${BIN_DIR}/${BIN_NAME}"
-BIN_PARENT="$(dirname "$BIN_DIR")"
-if [ -d "$BIN_DIR" ] && [ -w "$BIN_DIR" ]; then
-  printf "%s\n" "$LAUNCHER_CONTENT" > "$TARGET_PATH"
-  chmod +x "$TARGET_PATH"
-elif [ ! -d "$BIN_DIR" ] && [ -w "$BIN_PARENT" ]; then
-  mkdir -p "$BIN_DIR"
-  printf "%s\n" "$LAUNCHER_CONTENT" > "$TARGET_PATH"
+TARGET_PATH="${INSTALL_DIR}/${BIN_NAME}"
+if [ -w "$INSTALL_DIR" ]; then
+  mv "${TMP_DIR}/${BIN_NAME}" "$TARGET_PATH"
   chmod +x "$TARGET_PATH"
 elif command -v sudo >/dev/null 2>&1; then
-  sudo mkdir -p "$BIN_DIR"
-  printf "%s\n" "$LAUNCHER_CONTENT" | sudo tee "$TARGET_PATH" >/dev/null
+  sudo mv "${TMP_DIR}/${BIN_NAME}" "$TARGET_PATH"
   sudo chmod +x "$TARGET_PATH"
 else
-  fail "No write access to ${BIN_DIR} and sudo is unavailable."
+  fail "No write access to ${INSTALL_DIR} and sudo is unavailable."
 fi
 
-printf "Installed %s to %s\n" "$BIN_NAME" "$TARGET_PATH"
+printf "Installed %s %s to %s\n" "$BIN_NAME" "$VERSION" "$TARGET_PATH"

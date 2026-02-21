@@ -12,7 +12,21 @@ bun run dev
 ## Install
 
 ```bash
-curl -fsSSl https://raw.githubusercontent.com/lucaspiritogit/treq/main/install.sh | sh
+curl -fsSLO https://github.com/lucaspiritogit/treq/releases/latest/download/install.sh
+sh install.sh
+```
+
+Install a specific version:
+
+```bash
+TREQ_VERSION=v0.1.0 sh install.sh
+```
+
+Windows (PowerShell):
+
+```powershell
+iwr https://github.com/lucaspiritogit/treq/releases/latest/download/install.ps1 -OutFile install.ps1
+powershell -ExecutionPolicy Bypass -File .\install.ps1
 ```
 
 ## Features
@@ -20,7 +34,7 @@ curl -fsSSl https://raw.githubusercontent.com/lucaspiritogit/treq/main/install.s
 - Vim-style command mode (`:`) with command suggestions (for example `:send`, `:save`, `:list`, `:help`)
 - Fast keyboard-driven flow for method, URL, headers, request body, and response body
 - Request list sidebar (toggleable), with keyboard navigation
-- Save requests locally to `treq-requests.json`
+- Save requests locally to your user config directory (`~/.config/treq/treq-requests.json` on Unix)
 
 ## Keyboard Shortcuts
 
