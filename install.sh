@@ -2,7 +2,7 @@
 
 set -eu
 
-REPO_URL="${TREQ_REPO_URL:-https://github.com/lpirito/treq.git}"
+REPO_URL="${TREQ_REPO_URL:-https://github.com/lucaspiritogit/treq.git}"
 INSTALL_DIR="${TREQ_INSTALL_DIR:-$HOME/.local/share/treq}"
 BIN_DIR="${TREQ_BIN_DIR:-$HOME/.local/bin}"
 
