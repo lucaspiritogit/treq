@@ -10,22 +10,34 @@ export const methodColors: Record<HttpMethod, string> = {
   DELETE: "#ef4444",
 };
 
-export const commandSuggestions = [
-  { name: "send", description: "Send current HTTP request" },
-  { name: "save", description: "Save current request" },
-  { name: "list", description: "Focus request list sidebar" },
-  { name: "toggle-list", description: "Toggle request list sidebar" },
-  { name: "reload", description: "Reload saved requests file" },
-  { name: "url", description: "Focus URL input" },
-  { name: "headers", description: "Focus headers input" },
-  { name: "request", description: "Focus request body" },
-  { name: "response", description: "Focus response body" },
-  { name: "get", description: "Set method to GET" },
-  { name: "post", description: "Set method to POST" },
-  { name: "put", description: "Set method to PUT" },
-  { name: "patch", description: "Set method to PATCH" },
-  { name: "delete", description: "Set method to DELETE" },
-  { name: "help", description: "Open help modal" },
-  { name: "debug", description: "Open request/response debug modal" },
-  { name: "quit", description: "Exit application" },
-] as const;
+export type CommandSuggestion = {
+  name: string;
+  shortcuts: string[];
+  description: string;
+};
+
+export const commandSuggestions: CommandSuggestion[] = [
+  { name: "send", shortcuts: ["s", "run"], description: "Send current HTTP request" },
+  { name: "save", shortcuts: [], description: "Save current request" },
+  { name: "list", shortcuts: [], description: "Focus request list sidebar" },
+  { name: "toggle-list", shortcuts: ["tl", "sidebar"], description: "Toggle request list sidebar" },
+  { name: "reload", shortcuts: ["load"], description: "Reload saved requests file" },
+  { name: "url", shortcuts: ["i", "input"], description: "Focus URL input" },
+  { name: "headers", shortcuts: ["h"], description: "Focus headers input" },
+  { name: "request", shortcuts: ["r", "req"], description: "Focus request body" },
+  { name: "response", shortcuts: ["b", "res", "body"], description: "Focus response body" },
+  { name: "get", shortcuts: ["g"], description: "Set method to GET" },
+  { name: "post", shortcuts: ["p"], description: "Set method to POST" },
+  { name: "put", shortcuts: ["u"], description: "Set method to PUT" },
+  { name: "patch", shortcuts: ["t"], description: "Set method to PATCH" },
+  { name: "delete", shortcuts: ["d"], description: "Set method to DELETE" },
+  { name: "help", shortcuts: ["?"], description: "Open help modal" },
+  { name: "debug", shortcuts: ["dbg"], description: "Open request/response debug modal" },
+  { name: "quit", shortcuts: ["q", "exit"], description: "Exit application" },
+];
+
+export function resolveCommandAlias(rawCommand: string): string {
+  const command = rawCommand.trim().toLowerCase();
+  const match = commandSuggestions.find((item) => item.name === command || item.shortcuts.includes(command));
+  return match?.name ?? command;
+}

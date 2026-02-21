@@ -13,7 +13,7 @@ import { MethodPanel } from "./components/MethodPanel";
 import { ModePanel } from "./components/ModePanel";
 import { RequestListPanel } from "./components/RequestListPanel";
 import { SaveRequestModal } from "./components/SaveRequestModal";
-import { focusOrder, methodColors } from "./constants";
+import { focusOrder, methodColors, resolveCommandAlias } from "./constants";
 import type { DebugInfo, FocusField, HttpMethod, SavedRequest, UiMode } from "./types";
 import {
   formatResponseBody,
@@ -415,18 +415,18 @@ export function App() {
 
   const runCommand = useCallback((rawCommand: string) => {
     setCommandFeedback("");
-    const command = rawCommand.trim().toLowerCase();
+    const command = resolveCommandAlias(rawCommand);
 
     if (!command) {
       return;
     }
 
-    if (command === "q" || command === "quit" || command === "exit") {
+    if (command === "quit") {
       renderer.destroy();
       return;
     }
 
-    if (command === "s" || command === "send" || command === "run") {
+    if (command === "send") {
       void sendRequest();
       return;
     }
@@ -443,61 +443,61 @@ export function App() {
       return;
     }
 
-    if (command === "toggle-list" || command === "tl" || command === "sidebar") {
+    if (command === "toggle-list") {
       setRequestListOpen((value) => !value);
       return;
     }
 
-    if (command === "reload" || command === "load") {
+    if (command === "reload") {
       void loadSavedRequests();
       return;
     }
 
-    if (command === "i" || command === "input" || command === "url") {
+    if (command === "url") {
       setUiMode("input");
       setFocusField("url");
       return;
     }
 
-    if (command === "h" || command === "headers") {
+    if (command === "headers") {
       setUiMode("input");
       setFocusField("headers");
       return;
     }
 
-    if (command === "r" || command === "req" || command === "request") {
+    if (command === "request") {
       setUiMode("input");
       setFocusField("requestBody");
       return;
     }
 
-    if (command === "b" || command === "res" || command === "response" || command === "body") {
+    if (command === "response") {
       setUiMode("interactive");
       setFocusField("responseBody");
       return;
     }
 
-    if (command === "g" || command === "get") {
+    if (command === "get") {
       setMethod("GET");
       return;
     }
 
-    if (command === "p" || command === "post") {
+    if (command === "post") {
       setMethod("POST");
       return;
     }
 
-    if (command === "u" || command === "put") {
+    if (command === "put") {
       setMethod("PUT");
       return;
     }
 
-    if (command === "t" || command === "patch") {
+    if (command === "patch") {
       setMethod("PATCH");
       return;
     }
 
-    if (command === "d" || command === "delete") {
+    if (command === "delete") {
       setMethod("DELETE");
       return;
     }
@@ -507,7 +507,7 @@ export function App() {
       return;
     }
 
-    if (command === "debug" || command === "dbg") {
+    if (command === "debug") {
       setDebugModalOpen(true);
       return;
     }

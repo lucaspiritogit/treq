@@ -11,7 +11,12 @@ export function CommandSuggestionsPanel(props: CommandSuggestionsPanelProps) {
   }
 
   const query = props.commandLine.trim().toLowerCase().replace(/^:/, "");
-  const matches = commandSuggestions.filter((item) => item.name.startsWith(query)).slice(0, 5);
+  const matches = commandSuggestions.filter((item) => {
+    if (!query) {
+      return true;
+    }
+    return item.name.startsWith(query) || item.shortcuts.some((shortcut) => shortcut.startsWith(query));
+  }).slice(0, 5);
 
   return (
     <box border padding={1} title="Commands" backgroundColor="#0b1220">
@@ -27,6 +32,11 @@ export function CommandSuggestionsPanel(props: CommandSuggestionsPanelProps) {
                 <text>
                   <span fg="#93c5fd">:{item.name}</span>
                 </text>
+                {item.shortcuts.length > 0 ? (
+                  <text>
+                    <span fg="#64748b"> ({item.shortcuts.map((shortcut) => `:${shortcut}`).join(", ")})</span>
+                  </text>
+                ) : null}
                 <box flexGrow={1} />
                 <text>
                   <span fg="#64748b">{item.description}</span>
