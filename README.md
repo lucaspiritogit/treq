@@ -12,7 +12,7 @@ bun run dev
 ## Install
 
 ```bash
-curl -fsSSl https://raw.githubusercontent.com/lpirito/treq/main/install.sh | sh
+curl -fsSSl https://raw.githubusercontent.com/lucaspiritogit/treq/main/install.sh | sh
 ```
 
 ## Features
