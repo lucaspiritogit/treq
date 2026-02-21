@@ -13,7 +13,8 @@ export const methodColors: Record<HttpMethod, string> = {
 export const commandSuggestions = [
   { name: "send", description: "Send current HTTP request" },
   { name: "save", description: "Save current request" },
-  { name: "list", description: "Toggle request list sidebar" },
+  { name: "list", description: "Focus request list sidebar" },
+  { name: "toggle-list", description: "Toggle request list sidebar" },
   { name: "reload", description: "Reload saved requests file" },
   { name: "url", description: "Focus URL input" },
   { name: "headers", description: "Focus headers input" },

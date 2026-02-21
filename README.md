@@ -59,7 +59,8 @@ powershell -ExecutionPolicy Bypass -File .\install.ps1
 
 - `:send`, `:s`, `:run` send current request
 - `:save` save current request (overwrites loaded request)
-- `:list`, `:sidebar` toggle request list sidebar
+- `:list` focus request list sidebar
+- `:toggle-list`, `:tl`, `:sidebar` toggle request list sidebar
 - `:reload`, `:load` reload requests from `treq-requests.json`
 - `:url`, `:i`, `:input` focus URL input
 - `:headers`, `:h` focus headers input

@@ -436,7 +436,14 @@ export function App() {
       return;
     }
 
-    if (command === "list" || command === "sidebar") {
+    if (command === "list") {
+      setRequestListOpen(true);
+      setUiMode("interactive");
+      setFocusField("requestList");
+      return;
+    }
+
+    if (command === "toggle-list" || command === "tl" || command === "sidebar") {
       setRequestListOpen((value) => !value);
       return;
     }
